@@ -131,6 +131,7 @@ GameObject:
   - component: {fileID: 330585545}
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
+  - component: {fileID: 330585548}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -256,6 +257,27 @@ MonoBehaviour:
     m_MipBias: 0
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
+--- !u!114 &330585548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7983376287597e248a843a0900b6bdb3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_ComputeShader: {fileID: 7200000, guid: 66938a7965781c34ea412207b18dc42d, type: 3}
+  m_DLAMaster: {fileID: 1017765549}
+  smoothing: 0.025
+  ambientIntensity: 0
+  diffuseIntensity: 0
+  specularIntensity: 0
+  hasLight: 0
+  showDepth: 0
+  radius: 0.52
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -393,7 +415,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &695697340
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -475,7 +497,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1181320229
+--- !u!1 &1017765548
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -483,24 +505,42 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1181320230}
+  - component: {fileID: 1017765550}
+  - component: {fileID: 1017765549}
   m_Layer: 0
-  m_Name: point
+  m_Name: DLAMaster
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1181320230
+--- !u!114 &1017765549
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1017765548}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be730024a68a46f44b5ff8c3ea836ebb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pointComputeShader: {fileID: 7200000, guid: c27d6676ba928174ab48490e98e8b8b6, type: 3}
+  pointAmount: 5
+  bounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
+--- !u!4 &1017765550
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1181320229}
+  m_GameObject: {fileID: 1017765548}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 3.36, y: -10, z: 0}
+  m_LocalPosition: {x: -220.89127, y: 0, z: -119.01653}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -522,7 +562,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &2046396815
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -530,7 +570,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2046396814}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7b7fbb7857dd3964db4e3a80e5745e30, type: 3}
   m_Name: 
@@ -541,7 +581,6 @@ MonoBehaviour:
   points: []
   pointAmount: 100
   radius: 1
-  point: {fileID: 1181320230}
 --- !u!4 &2046396816
 Transform:
   m_ObjectHideFlags: 0
@@ -566,4 +605,4 @@ SceneRoots:
   - {fileID: 832575519}
   - {fileID: 2046396816}
   - {fileID: 695697341}
-  - {fileID: 1181320230}
+  - {fileID: 1017765550}

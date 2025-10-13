@@ -1,0 +1,43 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+struct Point
+{
+    float3 position;
+    uint isSolid;
+};
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWStructuredBuffer<Point> points;
+
+cbuffer Params
+{
+    float seed;
+    float deltaTime;
+    
+    float3 seedPoint;
+    
+    float radius;
+    float3 voxelSize;
+    
+    
+};
+
+float nrand(float2 uv)
+{
+    return frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453);
+}
+
+
+[numthreads(1, 1, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    float r = nrand(float2(seed+id.x, deltaTime));
+    Point p;
+    p.position = float3(nrand(float2(seed + id.x, deltaTime)), 
+                        nrand(float2(seed + id.x, -deltaTime)), 
+                        nrand(float2(-seed + id.x, deltaTime)));
+    p.isSolid = 0;
+    points[id.x] = p;
+}

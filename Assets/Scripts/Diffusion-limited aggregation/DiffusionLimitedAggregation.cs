@@ -10,8 +10,8 @@ public class DiffusionLimitedAggregation : MonoBehaviour
     [SerializeField] private List<Vector3> points = new List<Vector3>();
     [SerializeField] private int pointAmount;
     [SerializeField] private float radius;
-    [SerializeField] private Transform point;
     List<Vector3> voxelList;
+    Bounds bounds;
 
     private void Start()
     {
@@ -19,6 +19,8 @@ public class DiffusionLimitedAggregation : MonoBehaviour
         start = voxelSize;
         pointCloud.Add(start);
         voxelList = voxelGrid.GetVoxelList();
+        bounds = voxelGrid.GetBounds();
+
 
         for (int i = 0; i < pointAmount; i++)
         {
@@ -28,7 +30,11 @@ public class DiffusionLimitedAggregation : MonoBehaviour
 
     private Vector3 NewPoint()
     {
-        return voxelList[(int)Random.Range(0, voxelList.Count - 1)];
+        Vector3 pos = voxelList[(int)Random.Range(0, voxelList.Count - 1)];
+
+        pos.y = Mathf.Clamp(pos.y, bounds.extents.y, bounds.extents.y * 2);
+
+        return pos;
     }
 
 
@@ -54,7 +60,6 @@ public class DiffusionLimitedAggregation : MonoBehaviour
 
     private void Move()
     {
-        Bounds bounds = voxelGrid.GetBounds();
         Vector3 voxelSize = voxelGrid.GetVoxelSize();
         if (pointCloud.Count > pointAmount)
             return;
@@ -124,7 +129,6 @@ public class DiffusionLimitedAggregation : MonoBehaviour
         Gizmos.DrawWireSphere(new Vector3(0, -10, 0), radius);
 
         //Debug.Log(1 / (1 + Mathf.Pow((Vector3.Distance(point.position, new Vector3(0, -10, 0)) / radius), 2))); // inverse quadratic
-        Debug.Log(CalculateGaussian(point.position, new Vector3(0, -10, 0))); // gaussian
     }
 
     private float CalculateGaussian(Vector3 pos, Vector3 point)
