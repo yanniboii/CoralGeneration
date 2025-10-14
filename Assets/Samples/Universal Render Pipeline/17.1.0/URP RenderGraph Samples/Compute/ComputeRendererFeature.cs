@@ -21,6 +21,7 @@ public class ComputeRendererFeature : ScriptableRendererFeature
         // Compute buffers:
         GraphicsBuffer inputBuffer;
         RTHandle renderTextureHandle;
+        RenderTexture renderTexture;
 
         // Reflection of the data output. I use a preallocated list to avoid memory
         // allocations each frame.
@@ -37,6 +38,8 @@ public class ComputeRendererFeature : ScriptableRendererFeature
                 list.Add(i);
             }
             inputBuffer.SetData(list);
+
+            renderTexture = new RenderTexture(Camera.main.pixelWidth,Camera.main.pixelHeight, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
         }
 
         // Setup function to transfer the compute shader from the renderer feature to
