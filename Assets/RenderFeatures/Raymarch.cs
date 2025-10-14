@@ -1,22 +1,43 @@
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering.RenderGraphModule;
+using UnityEngine.Rendering.Universal;
 
 public class Raymarcher : ScriptableRendererFeature
 {
-    class CustomRenderPass : ScriptableRenderPass
+    [SerializeField] private ComputeShader rayMarcherComputeShader;
+    [SerializeField] private DLAMaster m_DLAMaster;
+
+    [Range(-0.5f, 0.5f)]
+    [SerializeField] private float smoothing;
+
+    [SerializeField] private float radius;
+
+    class ComputePass : ScriptableRenderPass
     {
+        public GraphicsBuffer outputBuffer;
+        private ComputeShader rayMarcherComputeShader;
         // This class stores the data needed by the RenderGraph pass.
         // It is passed as a parameter to the delegate function that executes the RenderGraph pass.
         private class PassData
         {
+            public BufferHandle output;
+            public RenderTexture renderTexture;
+            public ComputeShader rayMarcherComputeShader;
         }
 
         // This static method is passed as the RenderFunc delegate to the RenderGraph render pass.
         // It is used to execute draw commands.
-        static void ExecutePass(PassData data, RasterGraphContext context)
+        static void ExecutePass(PassData data, ComputeGraphContext context)
         {
+        }
+
+        public ComputePass(ComputeShader computeShader)
+        {
+            // Create the output buffer as a structured buffer
+            // Create the buffer with a length of 5 integers, so the compute shader can output 5 values.
+            outputBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 5, sizeof(int));
+            rayMarcherComputeShader = computeShader;
         }
 
         // RecordRenderGraph is where the RenderGraph handle can be accessed, through which render passes can be added to the graph.
@@ -26,8 +47,15 @@ public class Raymarcher : ScriptableRendererFeature
             const string passName = "Raymarcher";
 
             // This adds a raster render pass to the graph, specifying the name and the data type that will be passed to the ExecutePass function.
-            using (var builder = renderGraph.AddRasterRenderPass<PassData>(passName, out var passData))
+            using (var builder = renderGraph.AddComputePass<PassData>(passName, out var passData))
             {
+                BufferHandle outputHandleRG = renderGraph.ImportBuffer(outputBuffer);
+                passData.output = outputHandleRG;
+
+                builder.UseBuffer(passData.output, AccessFlags.Write);
+
+                passData.rayMarcherComputeShader = rayMarcherComputeShader;
+
                 // Use this scope to set the required inputs and outputs of the pass and to
                 // setup the passData with the required properties needed at pass execution time.
 
@@ -36,16 +64,35 @@ public class Raymarcher : ScriptableRendererFeature
                 // UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
                 UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
 
+
                 // Setup pass inputs and outputs through the builder interface.
                 // Eg:
                 // builder.UseTexture(sourceTexture);
                 // TextureHandle destination = UniversalRenderer.CreateRenderGraphTexture(renderGraph, cameraData.cameraTargetDescriptor, "Destination Texture", false);
-                
+
                 // This sets the render target of the pass to the active color texture. Change it to your own render target as needed.
-                builder.SetRenderAttachment(resourceData.activeColorTexture, 0);
+                //builder.SetRenderAttachment(resourceData.activeColorTexture, 0);
 
                 // Assigns the ExecutePass function to the render pass delegate. This will be called by the render graph when executing the pass.
-                builder.SetRenderFunc((PassData data, RasterGraphContext context) => ExecutePass(data, context));
+                builder.SetRenderFunc((PassData data, ComputeGraphContext context) =>
+                {
+                    // The first parameter is the compute shader
+                    // The second parameter is the function that uses the buffer
+                    // The third parameter is the StructuredBuffer output variable to attach the buffer to
+                    // The fourth parameter is the handle to the output buffer
+                    context.cmd.SetComputeBufferParam(passData.rayMarcherComputeShader, passData.rayMarcherComputeShader.FindKernel("CSMain"), "outputData", passData.output);
+                    context.cmd.DispatchCompute(passData.rayMarcherComputeShader, passData.rayMarcherComputeShader.FindKernel("CSMain"), 1, 1, 1);
+
+                    // Create an array to store the output data
+                    int[] outputData = new int[5];
+
+                    // Copy the output data from the output buffer to the array
+                    outputBuffer.GetData(outputData);
+
+
+
+                    ExecutePass(data, context);
+                });
             }
         }
 
@@ -57,6 +104,7 @@ public class Raymarcher : ScriptableRendererFeature
         // The render pipeline will ensure target setup and clearing happens in a performant manner.
         public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
         {
+
         }
 
         // NOTE: This method is part of the compatibility rendering path, please use the Render Graph API above instead.
@@ -66,21 +114,23 @@ public class Raymarcher : ScriptableRendererFeature
         // You don't have to call ScriptableRenderContext.submit, the render pipeline will call it at specific points in the pipeline.
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
+
         }
 
         // NOTE: This method is part of the compatibility rendering path, please use the Render Graph API above instead.
         // Cleanup any allocated resources that were created during the execution of this render pass.
         public override void OnCameraCleanup(CommandBuffer cmd)
         {
+
         }
     }
 
-    CustomRenderPass m_ScriptablePass;
+    ComputePass m_ScriptablePass;
 
     /// <inheritdoc/>
     public override void Create()
     {
-        m_ScriptablePass = new CustomRenderPass();
+        m_ScriptablePass = new ComputePass(rayMarcherComputeShader);
 
         // Configures where the render pass should be injected.
         m_ScriptablePass.renderPassEvent = RenderPassEvent.AfterRenderingOpaques;

@@ -25,13 +25,8 @@ public class RayMarchingMaster : MonoBehaviour
 
     List<ComputeBuffer> deleteComputeBuffers = new List<ComputeBuffer>();
 
-    List<Sphere> spheres = new List<Sphere>();
-
-
     private void Awake()
     {
-        //Random.InitState(0);
-
         _camera = GetComponent<Camera>();
         _camera.depthTextureMode = DepthTextureMode.Depth;
     }
@@ -74,52 +69,10 @@ public class RayMarchingMaster : MonoBehaviour
         m_ComputeShader.SetFloat("smoothing", smoothing);
         m_ComputeShader.SetFloat("sRadius", radius);
 
-        //Light[] lights = Light.GetLights(LightType.Directional, 0);
-        //ComputeBuffer lightBuffer = new ComputeBuffer(lights.Length, Light);
-
         renderTexture = new RenderTexture(Screen.width, Screen.height, 0);
         renderTexture.enableRandomWrite = true;
         renderTexture.Create();
-
-        // Set render texture in shader
     }
-
-    Sphere[] GenerateRandomSpheres()
-    {
-        Sphere[] spheres = new Sphere[15];
-        for (int i = 0; i < spheres.Length - 1; i++)
-        {
-            spheres[i].position = new Vector3(Random.Range(0f, 10f), Random.Range(0f, 10f), Random.Range(0f, 10f));
-            spheres[i].radius = Random.Range(0, 0.1f);
-            spheres[i].color = new Vector3(Random.Range(0, 1f), Random.Range(0, 1f), Random.Range(0, 1f));
-        }
-        return spheres;
-    }
-    Cube[] GenerateRandomCubes()
-    {
-        Cube[] cubes = new Cube[20];
-        for (int i = 0; i < cubes.Length - 1; i++)
-        {
-            cubes[i].position = new Vector3(Random.Range(0f, 10f), Random.Range(0f, 10f), Random.Range(0f, 10f));
-            cubes[i].bounds = new Vector3(Random.Range(0.1f, 2f), Random.Range(0.1f, 2f), Random.Range(0.1f, 2f));
-            cubes[i].color = new Vector3(Random.Range(0, 1f), Random.Range(0, 1f), Random.Range(0, 1f));
-        }
-        return cubes;
-    }
-
-    //Triangle[] GenerateRandomTriangles()
-    //{
-    //    Triangle[] triangles = new Triangle[12];
-    //    for (int i = 0; i < triangles.Length - 1; i++)
-    //    {
-    //        triangles[i].position = new Vector3(Random.Range(0f, 4f), Random.Range(0f, 4f), Random.Range(0f, 4f));
-    //        triangles[i].vertex1 = new Vector3(Random.Range(0f, 4f), Random.Range(0f, 4f), Random.Range(0f, 4f));
-    //        triangles[i].vertex2 = new Vector3(Random.Range(0f, 4f), Random.Range(0f, 4f), Random.Range(0f, 4f));
-    //        triangles[i].vertex3 = new Vector3(Random.Range(0f, 4f), Random.Range(0f, 4f), Random.Range(0f, 4f));
-    //        triangles[i].color = new Vector3(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
-    //    }
-    //    return triangles;
-    //}
 
     void InitRenderTexture()
     {
@@ -143,7 +96,6 @@ public class RayMarchingMaster : MonoBehaviour
 
     void OnRenderImage(RenderTexture src, RenderTexture dest)
     {
-        Debug.Log("yo");
         Graphics.Blit(src, depthTexture);
         Init();
 
@@ -167,48 +119,4 @@ public class RayMarchingMaster : MonoBehaviour
             deleteComputeBuffers.RemoveAt(i);
         }
     }
-
-    private void OnDestroy()
-    {
-        //for (int i = 0; i < deleteComputeBuffers.Count; i++)
-        //{
-        //    deleteComputeBuffers[i].Dispose();
-        //}
-    }
 }
-
-public struct Sphere
-{
-    public Vector3 position;
-    public float radius;
-    public Vector3 color;
-
-    public static int GetSize()
-    {
-        return (sizeof(float) * 7);
-    }
-}
-
-public struct Cube
-{
-    public Vector3 position;
-    public Vector3 bounds;
-    public Vector3 color;
-
-    public static int GetSize()
-    {
-        return (sizeof(float) * 9);
-    }
-}
-public struct Triangle
-{
-    public Vector3 position;
-    public Vector3 vertex1;
-    public Vector3 vertex2;
-    public Vector3 vertex3;
-    public Vector3 color;
-    public static int GetSize()
-    {
-        return (sizeof(float) * 15);
-    }
-};

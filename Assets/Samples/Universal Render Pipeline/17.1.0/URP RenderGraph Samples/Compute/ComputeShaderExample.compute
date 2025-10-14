@@ -1,0 +1,17 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// Create a StructuredBuffer/ComputeBuffer with read only flag.
+StructuredBuffer<int> inputData;
+// Create a StructuredBuffer/ComputeBuffer with read & write flag.
+RWTexture2D<float4> Result;
+
+float multiplier;
+
+// CSMain is the entry point we use we have to define the entry points as kernel.
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // We use the thead id as index for the data.
+    Result[id.xy] = float4(1, 1, 1, 1);
+}
