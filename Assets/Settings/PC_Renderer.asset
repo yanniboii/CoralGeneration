@@ -26,8 +26,8 @@ MonoBehaviour:
     probeVolumeBlendStatesCS: {fileID: 7200000, guid: b9a23f869c4fd45f19c5ada54dd82176, type: 3}
   m_RendererFeatures:
   - {fileID: 7833122117494664109}
-  - {fileID: 3954979309897196035}
-  m_RendererFeatureMap: ad6b866f10d7b46c0322715cbae8e236
+  - {fileID: 5345411609205650340}
+  m_RendererFeatureMap: ad6b866f10d7b46ca4b3f39089b72e4a
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
@@ -53,7 +53,7 @@ MonoBehaviour:
   m_DepthTextureFormat: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 0
---- !u!114 &3954979309897196035
+--- !u!114 &5345411609205650340
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -62,10 +62,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 890f42c3a22b7184aaeae320a9362b72, type: 3}
-  m_Name: Raymarcher
+  m_Script: {fileID: 11500000, guid: febcb3ead18d97042a101999937ced2f, type: 3}
+  m_Name: ComputeRendererFeature
   m_EditorClassIdentifier: 
   m_Active: 1
+  computeShader: {fileID: 7200000, guid: e0a62cf8f93b4da439ba6c1df01269a4, type: 3}
 --- !u!114 &7833122117494664109
 MonoBehaviour:
   m_ObjectHideFlags: 0

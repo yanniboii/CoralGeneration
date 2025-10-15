@@ -23,6 +23,9 @@ public class ComputeRendererFeature : ScriptableRendererFeature
         RTHandle renderTextureHandle;
         RenderTexture renderTexture;
 
+
+        ProfilingSampler m_ProfilingSampler = new ProfilingSampler("CameraBlit");
+
         // Reflection of the data output. I use a preallocated list to avoid memory
         // allocations each frame.
         int[] outputData = new int[20];
@@ -39,7 +42,12 @@ public class ComputeRendererFeature : ScriptableRendererFeature
             }
             inputBuffer.SetData(list);
 
-            renderTexture = new RenderTexture(Camera.main.pixelWidth,Camera.main.pixelHeight, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+
+            renderTexture = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+
+            renderTexture.enableRandomWrite = true;
+
+            renderTextureHandle = RTHandles.Alloc(renderTexture);
         }
 
         // Setup function to transfer the compute shader from the renderer feature to
@@ -56,17 +64,23 @@ public class ComputeRendererFeature : ScriptableRendererFeature
             public ComputeShader cs;
             // Buffer handles for the compute buffers.
             public BufferHandle input;
-            public TextureHandle renderTexture;
+            public TextureHandle sourceTexture;
+            public TextureHandle destTexture;
+
+            public ProfilingSampler profilingSampler;
         }
 
         // Records a render graph render pass which blits the BlitData's active texture back to the camera's color attachment.
-        public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
+        public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameContext)
         {
-            Debug.Log($"Output from compute shader: {string.Join(", ", renderTextureHandle.rt.width)}");
-
             // We need to import buffers when they are created outside of the render graph.
             BufferHandle inputHandle = renderGraph.ImportBuffer(inputBuffer);
             TextureHandle textureHandle = renderGraph.ImportTexture(renderTextureHandle);
+            UniversalCameraData cameraData = frameContext.Get<UniversalCameraData>();
+
+            UniversalResourceData frameData = frameContext.Get<UniversalResourceData>();
+
+            TextureHandle activeColorTexture = frameData.activeColorTexture;
 
             // Starts the recording of the render graph pass given the name of the pass
             // and outputting the data used to pass data to the execution of the render function.
@@ -76,25 +90,50 @@ public class ComputeRendererFeature : ScriptableRendererFeature
                 // Set the pass data so the data can be transfered from the recording to the execution.
                 passData.cs = cs;
                 passData.input = inputHandle;
-                passData.renderTexture = textureHandle;
-
+                passData.sourceTexture = textureHandle;
+                passData.destTexture = activeColorTexture;
+                passData.profilingSampler = m_ProfilingSampler;
                 // UseBuffer is used to setup render graph dependencies together with read and write flags.
                 builder.UseBuffer(passData.input);
 
-                builder.UseTexture(passData.renderTexture, AccessFlags.Write);
+                builder.UseTexture(passData.sourceTexture, AccessFlags.Write);
                 // The execution function is also call SetRenderfunc for compute passes.
                 builder.SetRenderFunc((PassData data, ComputeGraphContext cgContext) => ExecutePass(data, cgContext));
             }
+
+            using (var builder = renderGraph.AddRasterRenderPass<PassData>("BlitComputeResult", out PassData passData))
+            {
+                passData.sourceTexture = textureHandle;
+                passData.destTexture = activeColorTexture;
+
+
+                builder.UseTexture(passData.sourceTexture, AccessFlags.Read);
+                builder.UseTexture(passData.destTexture, AccessFlags.Read);
+
+                builder.SetRenderFunc((PassData data, RasterGraphContext ctx) =>
+                {
+                    //Blitter.BlitCameraTexture(ctx.cmd, data.sourceTexture, data.destTexture);
+                });
+            }
         }
+
+        public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
+        {
+
+
+        }
+
 
         // ExecutePass is the render function set in the render graph recordings.
         // This is good practice to avoid using variables outside of the lambda it is called from.
         // It is static to avoid using member variables which could cause unintended behaviour.
         static void ExecutePass(PassData data, ComputeGraphContext cgContext)
         {
+            int kernel = data.cs.FindKernel("CSMain");
+
             // Attaches the compute buffers.
-            cgContext.cmd.SetComputeBufferParam(data.cs, data.cs.FindKernel("CSMain"), "inputData", data.input);
-            cgContext.cmd.SetComputeTextureParam(data.cs, data.cs.FindKernel("CSMain"), "Result", data.renderTexture);
+            cgContext.cmd.SetComputeBufferParam(data.cs, kernel, "inputData", data.input);
+            cgContext.cmd.SetComputeTextureParam(data.cs, kernel, "Result", data.sourceTexture);
             cgContext.cmd.SetComputeFloatParam(data.cs, "multiplier", 5);
 
             int threadGroupsX = Mathf.CeilToInt(Camera.main.pixelWidth / 32.0f);
@@ -102,11 +141,10 @@ public class ComputeRendererFeature : ScriptableRendererFeature
 
             // Dispaches the compute shader with a given kernel as entrypoint.
             // The amount of thread groups determine how many groups to execute of the kernel.
-            cgContext.cmd.DispatchCompute(data.cs, data.cs.FindKernel("CSMain"), threadGroupsX, threadGroupsY, 1);
-
-
+            cgContext.cmd.DispatchCompute(data.cs, kernel, threadGroupsX, threadGroupsY, 1);
         }
     }
+
 
     [SerializeField]
     ComputeShader computeShader;
@@ -119,7 +157,7 @@ public class ComputeRendererFeature : ScriptableRendererFeature
         // Initialize the compute pass.
         m_ComputePass = new ComputePass();
         // Sets the renderer feature to execute before rendering.
-        m_ComputePass.renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
+        m_ComputePass.renderPassEvent = RenderPassEvent.AfterRendering;
     }
 
     // Here you can inject one or multiple render passes in the renderer.
