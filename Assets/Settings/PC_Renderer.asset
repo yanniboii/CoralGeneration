@@ -1,5 +1,21 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-6012322989911532441
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: febcb3ead18d97042a101999937ced2f, type: 3}
+  m_Name: ComputeRendererFeature
+  m_EditorClassIdentifier: Assembly-CSharp::ComputeRendererFeature
+  m_Active: 1
+  computeShader: {fileID: 7200000, guid: e0a62cf8f93b4da439ba6c1df01269a4, type: 3}
+  material: {fileID: -876546973899608171, guid: 8f6a40d408f23e64e93e507e222c517e, type: 3}
+  rt: {fileID: 8400000, guid: b7750bfee974c5943a94f2a5204c2991, type: 2}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26,12 +42,17 @@ MonoBehaviour:
     probeVolumeBlendStatesCS: {fileID: 7200000, guid: b9a23f869c4fd45f19c5ada54dd82176, type: 3}
   m_RendererFeatures:
   - {fileID: 7833122117494664109}
-  - {fileID: 5345411609205650340}
-  m_RendererFeatureMap: ad6b866f10d7b46ca4b3f39089b72e4a
+  - {fileID: 8769195571688670651}
+  - {fileID: -6012322989911532441}
+  - {fileID: 6014836398618655304}
+  m_RendererFeatureMap: ad6b866f10d7b46cbb856e48e970b279679c686718f08fac483ac129d6fd7853
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
-  m_AssetVersion: 2
+  m_AssetVersion: 3
+  m_PrepassLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
   m_OpaqueLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -53,7 +74,7 @@ MonoBehaviour:
   m_DepthTextureFormat: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 0
---- !u!114 &5345411609205650340
+--- !u!114 &6014836398618655304
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -62,11 +83,17 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: febcb3ead18d97042a101999937ced2f, type: 3}
-  m_Name: ComputeRendererFeature
-  m_EditorClassIdentifier: 
+  m_Script: {fileID: 11500000, guid: b00045f12942b46c698459096c89274e, type: 3}
+  m_Name: FullScreenPassRendererFeature
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.FullScreenPassRendererFeature
   m_Active: 1
-  computeShader: {fileID: 7200000, guid: e0a62cf8f93b4da439ba6c1df01269a4, type: 3}
+  injectionPoint: 600
+  fetchColorBuffer: 0
+  requirements: 0
+  passMaterial: {fileID: 2100000, guid: 40ca6b48e2e7a764fb5b4f93b9f9beb1, type: 2}
+  passIndex: 0
+  bindDepthStencilAttachment: 0
+  m_Version: 1
 --- !u!114 &7833122117494664109
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -93,3 +120,20 @@ MonoBehaviour:
     BlurQuality: 0
     Falloff: 100
     SampleCount: -1
+--- !u!114 &8769195571688670651
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 844a96d8ebb8a904aaa6dc603c116808, type: 3}
+  m_Name: OutputTextureRendererFeature
+  m_EditorClassIdentifier: Assembly-CSharp::OutputTextureRendererFeature
+  m_Active: 1
+  m_PassEvent: 500
+  m_TextureName: _InputTexture
+  m_TextureType: 0
+  m_Material: {fileID: -876546973899608171, guid: 8f6a40d408f23e64e93e507e222c517e, type: 3}

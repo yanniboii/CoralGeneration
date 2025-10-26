@@ -13,5 +13,5 @@ float multiplier;
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     // We use the thead id as index for the data.
-    Result[id.xy] = float4(1, 1, 1, 1);
+    Result[id.xy] = float4(0, 1, 0, 1);
 }
