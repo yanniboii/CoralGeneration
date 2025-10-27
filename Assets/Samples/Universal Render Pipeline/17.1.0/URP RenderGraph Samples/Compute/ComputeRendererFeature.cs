@@ -38,7 +38,7 @@ public class ComputeRendererFeature : ScriptableRendererFeature
         // Constructor is used to initialize the compute buffers.
         public ComputePass(Material material)
         {
-            BufferDesc sphereDesc = new BufferDesc(20, sizeof(int));
+            BufferDesc sphereDesc = new BufferDesc(20, (sizeof(float) * 3) + sizeof(uint));
             sphereBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 20, (sizeof(float)*3) + sizeof(uint));
             var sphereList = new List<Sphere>();
             for (int i = 0; i < 20; i++)
@@ -50,7 +50,7 @@ public class ComputeRendererFeature : ScriptableRendererFeature
             }
             sphereBuffer.SetData(sphereList);
 
-            BufferDesc cubeDesc = new BufferDesc(20, sizeof(int));
+            BufferDesc cubeDesc = new BufferDesc(20, sizeof(float) * 9);
             cubeBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 20, sizeof(float)*9);
             var cubeList = new List<Cube>();
             for (int i = 0; i < 20; i++)
@@ -129,16 +129,16 @@ public class ComputeRendererFeature : ScriptableRendererFeature
                 passData.smoothing = 1.5f;
                 passData.radius = 2;
                 // UseBuffer is used to setup render graph dependencies together with read and write flags.
-                builder.UseBuffer(passData.Spheres,AccessFlags.ReadWrite);
-                builder.UseBuffer(passData.Cubes, AccessFlags.ReadWrite);
+                builder.UseBuffer(passData.Spheres);
+                builder.UseBuffer(passData.Cubes);
 
                 builder.UseTexture(passData.resultTexture, AccessFlags.Write);
                 builder.UseTexture(passData.sourceTexture, AccessFlags.Read);
                 // The execution function is also call SetRenderfunc for compute passes.
                 builder.SetRenderFunc((PassData data, ComputeGraphContext cgContext) => ExecutePass(data, cgContext));
             }
-            //Debug.Log(material);
-            //material.SetTexture(textureName, materialRT);
+
+
             var feature = Instance;
             if (feature == null) return;
 
@@ -162,7 +162,7 @@ public class ComputeRendererFeature : ScriptableRendererFeature
             SetParameters(data, cgContext);
 
             cgContext.cmd.SetComputeTextureParam(data.cs, kernel, "Source", data.sourceTexture);
-            //m_ComputeShader.SetTexture(0, "_DepthTexture", depthTexture);
+
             cgContext.cmd.SetComputeBufferParam(data.cs, kernel, "Spheres", data.Spheres);
             cgContext.cmd.SetComputeBufferParam(data.cs, kernel, "Cubes", data.Cubes);
             cgContext.cmd.SetComputeTextureParam(data.cs, kernel, "Result", data.resultTexture);

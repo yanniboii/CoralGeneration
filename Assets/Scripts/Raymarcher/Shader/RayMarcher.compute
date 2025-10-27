@@ -66,15 +66,15 @@ const float3 light = float3(-2,4,-2);
 
 int _NumSpheres;
 
-RWStructuredBuffer<Sphere> Spheres;
+StructuredBuffer<Sphere> Spheres;
 
 int _NumCubes;
 
-RWStructuredBuffer<Cube> Cubes;
+StructuredBuffer<Cube> Cubes;
 
 int _NumTriangles;
 
-RWStructuredBuffer<Triangle> Triangles;
+StructuredBuffer<Triangle> Triangles;
 
 
 //Ray's
