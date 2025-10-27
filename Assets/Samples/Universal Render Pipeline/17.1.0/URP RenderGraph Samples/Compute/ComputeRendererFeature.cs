@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.RenderGraphModule;
@@ -13,6 +14,8 @@ using UnityEngine.Rendering.Universal;
 // between the passes are created as they would have done for two render passes.
 public class ComputeRendererFeature : ScriptableRendererFeature
 {
+    public static ComputeRendererFeature Instance { get; private set; }
+
     // We will treat the compute pass as a normal Scriptable Render Pass.
     class ComputePass : ScriptableRenderPass
     {
@@ -21,46 +24,58 @@ public class ComputeRendererFeature : ScriptableRendererFeature
         ComputeShader cs;
 
         // Compute buffers:
-        GraphicsBuffer inputBuffer;
+        GraphicsBuffer sphereBuffer;
+        GraphicsBuffer cubeBuffer;
         RTHandle raymarcherHandle;
-        RenderTexture renderTexture;
 
         Material material;
         string textureName = "_InputTexture";
 
-        ComputeRendererFeature parent;
-
         public RTHandle RayMarchTexture => raymarcherHandle;
-
-        // Reflection of the data output. I use a preallocated list to avoid memory
-        // allocations each frame.
-        int[] outputData = new int[20];
 
         #endregion
 
         // Constructor is used to initialize the compute buffers.
-        public ComputePass(Material material, ComputeRendererFeature parent)
+        public ComputePass(Material material)
         {
-            BufferDesc desc = new BufferDesc(20, sizeof(int));
-            inputBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 20, sizeof(int));
-            var list = new List<int>();
+            BufferDesc sphereDesc = new BufferDesc(20, sizeof(int));
+            sphereBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 20, (sizeof(float)*3) + sizeof(uint));
+            var sphereList = new List<Sphere>();
             for (int i = 0; i < 20; i++)
             {
-                list.Add(i);
+                Sphere sphere = new Sphere();
+                sphere.pos = new Vector3(0, 0, i);
+                sphere.isSolid = 0;
+                sphereList.Add(sphere);
             }
-            inputBuffer.SetData(list);
+            sphereBuffer.SetData(sphereList);
+
+            BufferDesc cubeDesc = new BufferDesc(20, sizeof(int));
+            cubeBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 20, sizeof(float)*9);
+            var cubeList = new List<Cube>();
+            for (int i = 0; i < 20; i++)
+            {
+                Cube cube = new Cube();
+                cube.position = new Vector3(0, 0, i);
+                cube.color = new Vector3(0, 0, i);
+                cube.bounds = new Vector3(0, 0, i);
+                cubeList.Add(cube);
+            }
+            cubeBuffer.SetData(cubeList);
 
             this.material = material;
 
-            this.parent = parent;
-
-            renderTexture = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
-
-            renderTexture.enableRandomWrite = true;
 
             if(raymarcherHandle == null)
             {
-                raymarcherHandle = RTHandles.Alloc(renderTexture);
+                raymarcherHandle?.Release();
+
+                RenderTexture materialRT = new RenderTexture(Screen.width, Screen.height, 0);
+                materialRT.enableRandomWrite = true;
+                materialRT.useDynamicScale = true;
+                materialRT.Create();
+
+                raymarcherHandle = RTHandles.Alloc(materialRT);
             }
         }
 
@@ -77,33 +92,28 @@ public class ComputeRendererFeature : ScriptableRendererFeature
             // Compute shader.
             public ComputeShader cs;
             // Buffer handles for the compute buffers.
-            public BufferHandle input;
+            public BufferHandle Spheres;
+            public BufferHandle Cubes;
+            public TextureHandle resultTexture;
             public TextureHandle sourceTexture;
+
+            public float smoothing;
+            public float radius;
         }
 
         // Records a render graph render pass which blits the BlitData's active texture back to the camera's color attachment.
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameContext)
         {
-            // We need to import buffers when they are created outside of the render graph.
-            BufferHandle inputHandle = renderGraph.ImportBuffer(inputBuffer);
+            BufferHandle sphereBufferHandle = renderGraph.ImportBuffer(sphereBuffer);
+            BufferHandle cubeBufferHandle = renderGraph.ImportBuffer(cubeBuffer);
             //TextureHandle textureHandle = renderGraph.ImportTexture(raymarcherHandle);
-            UniversalCameraData cameraData = frameContext.Get<UniversalCameraData>();
 
-            Texture materialTexture = material.GetTexture(textureName);
-            Debug.Log(materialTexture);
-            RenderTexture materialRT = new RenderTexture(materialTexture.width,materialTexture.height,0);
-            materialRT.enableRandomWrite = true;  // optional if you'll use it in compute
-            materialRT.Create();
+            TextureHandle materialTextureHandle = renderGraph.ImportTexture(raymarcherHandle);
 
-            // Blit the texture into the render texture
-            Graphics.Blit(materialTexture, materialRT);
+            UniversalResourceData frameData = frameContext.Get<UniversalResourceData>();
 
-            RTHandle materialRTHandle;
-            materialRTHandle = RTHandles.Alloc(materialRT);
+            TextureHandle activeColorTexture = frameData.activeColorTexture;
 
-            TextureHandle materialTextureHandle = renderGraph.ImportTexture(materialRTHandle);
-
-            
             // Starts the recording of the render graph pass given the name of the pass
             // and outputting the data used to pass data to the execution of the render function.
             // Notice that we use "AddComputePass" when we are working with compute.
@@ -111,18 +121,32 @@ public class ComputeRendererFeature : ScriptableRendererFeature
             {
                 // Set the pass data so the data can be transfered from the recording to the execution.
                 passData.cs = cs;
-                passData.input = inputHandle;
-                passData.sourceTexture = materialTextureHandle;
-                // UseBuffer is used to setup render graph dependencies together with read and write flags.
-                builder.UseBuffer(passData.input);
+                passData.Spheres = sphereBufferHandle;
+                passData.Cubes = cubeBufferHandle;
+                passData.resultTexture = materialTextureHandle;
+                passData.sourceTexture = activeColorTexture;
 
-                builder.UseTexture(passData.sourceTexture, AccessFlags.Write);
+                passData.smoothing = 1.5f;
+                passData.radius = 2;
+                // UseBuffer is used to setup render graph dependencies together with read and write flags.
+                builder.UseBuffer(passData.Spheres,AccessFlags.ReadWrite);
+                builder.UseBuffer(passData.Cubes, AccessFlags.ReadWrite);
+
+                builder.UseTexture(passData.resultTexture, AccessFlags.Write);
+                builder.UseTexture(passData.sourceTexture, AccessFlags.Read);
                 // The execution function is also call SetRenderfunc for compute passes.
                 builder.SetRenderFunc((PassData data, ComputeGraphContext cgContext) => ExecutePass(data, cgContext));
             }
             //Debug.Log(material);
             //material.SetTexture(textureName, materialRT);
-            parent.rt = materialRT;
+            var feature = Instance;
+            if (feature == null) return;
+
+            var texture = feature.GetRaymarchTexture();
+            if (texture != null)
+            {
+                material.SetTexture(textureName, texture);
+            }
         }
 
         // ExecutePass is the render function set in the render graph recordings.
@@ -133,8 +157,15 @@ public class ComputeRendererFeature : ScriptableRendererFeature
             int kernel = data.cs.FindKernel("CSMain");
 
             // Attaches the compute buffers.
-            cgContext.cmd.SetComputeBufferParam(data.cs, kernel, "inputData", data.input);
-            cgContext.cmd.SetComputeTextureParam(data.cs, kernel, "Result", data.sourceTexture);
+
+            CreateScene(data, cgContext);
+            SetParameters(data, cgContext);
+
+            cgContext.cmd.SetComputeTextureParam(data.cs, kernel, "Source", data.sourceTexture);
+            //m_ComputeShader.SetTexture(0, "_DepthTexture", depthTexture);
+            cgContext.cmd.SetComputeBufferParam(data.cs, kernel, "Spheres", data.Spheres);
+            cgContext.cmd.SetComputeBufferParam(data.cs, kernel, "Cubes", data.Cubes);
+            cgContext.cmd.SetComputeTextureParam(data.cs, kernel, "Result", data.resultTexture);
             cgContext.cmd.SetComputeFloatParam(data.cs, "multiplier", 5);
 
             int threadGroupsX = Mathf.CeilToInt(Camera.main.pixelWidth / 32.0f);
@@ -145,10 +176,25 @@ public class ComputeRendererFeature : ScriptableRendererFeature
             cgContext.cmd.DispatchCompute(data.cs, kernel, threadGroupsX, threadGroupsY, 1);
         }
 
+        static void CreateScene(PassData data, ComputeGraphContext cgContext)
+        {
+            cgContext.cmd.SetComputeIntParam(data.cs, "_NumSpheres", 20);
+
+            cgContext.cmd.SetComputeFloatParam(data.cs, "smoothing", data.smoothing);
+            cgContext.cmd.SetComputeFloatParam(data.cs,"sRadius", data.radius);
+        }
+
+        static void SetParameters(PassData data, ComputeGraphContext cgContext)
+        {
+            cgContext.cmd.SetComputeMatrixParam(data.cs,"_CameraToWorld", Camera.main.cameraToWorldMatrix);
+            cgContext.cmd.SetComputeMatrixParam(data.cs, "_CameraInverseProjection", Camera.main.projectionMatrix.inverse);
+        }
+
         public override void FrameCleanup(CommandBuffer cmd)
         {
             base.FrameCleanup(cmd);
-            inputBuffer.Dispose();
+            sphereBuffer.Dispose();
+            cubeBuffer.Dispose();
         }
     }
 
@@ -160,15 +206,15 @@ public class ComputeRendererFeature : ScriptableRendererFeature
     [SerializeField]
     Material material;
 
-    [SerializeField]
-    public RenderTexture rt;
     /// <inheritdoc/>
     public override void Create()
     {
         // Initialize the compute pass.
-        m_ComputePass = new ComputePass(material, this);
+        m_ComputePass = new ComputePass(material);
         // Sets the renderer feature to execute before rendering.
         m_ComputePass.renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
+        
+        Instance = this;
     }
 
     // Here you can inject one or multiple render passes in the renderer.
@@ -197,6 +243,21 @@ public class ComputeRendererFeature : ScriptableRendererFeature
     {
         base.Dispose(disposing);
     }
+
+    public RTHandle GetRaymarchTexture()
+    {
+        return m_ComputePass?.RayMarchTexture;
+    }
 }
 
+struct Sphere {
+    public Vector3 pos;
+    public uint isSolid;
+}
 
+struct Cube
+{
+    public Vector3 position;
+    public Vector3 bounds;
+    public Vector3 color;
+}

@@ -12,10 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: febcb3ead18d97042a101999937ced2f, type: 3}
   m_Name: ComputeRendererFeature
   m_EditorClassIdentifier: Assembly-CSharp::ComputeRendererFeature
-  m_Active: 1
-  computeShader: {fileID: 7200000, guid: e0a62cf8f93b4da439ba6c1df01269a4, type: 3}
-  material: {fileID: -876546973899608171, guid: 8f6a40d408f23e64e93e507e222c517e, type: 3}
-  rt: {fileID: 8400000, guid: b7750bfee974c5943a94f2a5204c2991, type: 2}
+  m_Active: 0
+  computeShader: {fileID: 7200000, guid: 66938a7965781c34ea412207b18dc42d, type: 3}
+  material: {fileID: 2100000, guid: 40ca6b48e2e7a764fb5b4f93b9f9beb1, type: 2}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
