@@ -205,7 +205,7 @@ float4 SDFScene(float3 pos){
         Cube cube = Cubes[j];
         float distanceToCube = SDFBox(pos - cube.position,cube.bounds);
         
-        sceneResult = sminRootWithColor(sceneResult.distance, sceneResult.color, distanceToCube, cube.color, smoothing);
+        //sceneResult = sminRootWithColor(sceneResult.distance, sceneResult.color, distanceToCube, cube.color, smoothing);
    }
 
     for(int k = 0; k < _NumTriangles; k++){
@@ -288,9 +288,8 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         if (dst <= epsilon) {
             float3 col = sceneInfo.xyz;
 
-                Result[id.xy] = float4(1,0,1,1);
+            Result[id.xy] = float4(col,1.0f);
             
-
             break;
         }
 

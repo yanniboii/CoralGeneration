@@ -53,10 +53,10 @@ public class RayMarchingMaster : MonoBehaviour
     {
         m_ComputeShader.SetInt("_NumSpheres", m_DLAMaster.GetPointAmount());
 
-        ComputeBuffer sphereBuffer = m_DLAMaster.GetComputeBuffer();
+        // ComputeBuffer sphereBuffer = m_DLAMaster.GetComputeBuffer();
 
 
-        m_ComputeShader.SetBuffer(0, "Spheres", sphereBuffer);
+        //m_ComputeShader.SetBuffer(0, "Spheres", sphereBuffer);
 
 
         m_ComputeShader.SetBool("hasLight", hasLight);

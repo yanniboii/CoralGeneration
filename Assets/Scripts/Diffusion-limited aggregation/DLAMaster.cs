@@ -2,12 +2,14 @@ using UnityEngine;
 
 public class DLAMaster : MonoBehaviour
 {
+    public static DLAMaster Instance { get; private set; }
+
     [SerializeField] private ComputeShader pointComputeShader;
     [SerializeField] private int pointAmount;
 
     [SerializeField] private Bounds bounds;
 
-    private ComputeBuffer pointComputeBuffer;
+    private GraphicsBuffer pointComputeBuffer;
     private Point[] cpuData;
 
     private float seed;
@@ -15,18 +17,13 @@ public class DLAMaster : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Awake()
     {
+        Instance = this;
         pointComputeShader = Instantiate(pointComputeShader);
 
         seed = Random.Range(0, 10000);
         CreateBuffer();
 
         Dispatch();
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        Debug.Log("oy");
     }
 
     private void OnDestroy()
@@ -36,7 +33,7 @@ public class DLAMaster : MonoBehaviour
 
     void CreateBuffer()
     {
-        pointComputeBuffer = new ComputeBuffer(pointAmount, (sizeof(float) * 3) + sizeof(uint));
+        pointComputeBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, pointAmount, Point.GetSize());
     }
 
     void SetBuffer()
@@ -77,11 +74,20 @@ public class DLAMaster : MonoBehaviour
         }
     }
 
-    public ComputeBuffer GetComputeBuffer() { return pointComputeBuffer; }
+    private void OnDisable()
+    {
+        pointComputeBuffer.Dispose();
+    }
+
+    public GraphicsBuffer GetComputeBuffer() { return pointComputeBuffer; }
     public int GetPointAmount() { return pointAmount; }
+
+
 }
 struct Point
 {
     public Vector3 position;
     public uint isSolid;
+
+    public static int GetSize() { return (sizeof(float) * 3) + sizeof(uint); }
 };

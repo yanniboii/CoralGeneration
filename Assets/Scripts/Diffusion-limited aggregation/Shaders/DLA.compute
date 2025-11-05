@@ -38,6 +38,7 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     p.position = float3(nrand(float2(seed + id.x, deltaTime)), 
                         nrand(float2(seed + id.x, -deltaTime)), 
                         nrand(float2(-seed + id.x, deltaTime)));
+    p.position *= 10;
     p.isSolid = 0;
     points[id.x] = p;
 }
