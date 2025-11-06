@@ -131,7 +131,6 @@ GameObject:
   - component: {fileID: 330585545}
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
-  - component: {fileID: 330585548}
   - component: {fileID: 330585550}
   - component: {fileID: 330585549}
   - component: {fileID: 330585551}
@@ -260,27 +259,6 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
---- !u!114 &330585548
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 330585543}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7983376287597e248a843a0900b6bdb3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_ComputeShader: {fileID: 7200000, guid: 66938a7965781c34ea412207b18dc42d, type: 3}
-  m_DLAMaster: {fileID: 1017765549}
-  smoothing: 0.025
-  ambientIntensity: 0
-  diffuseIntensity: 0
-  specularIntensity: 0
-  hasLight: 0
-  showDepth: 0
-  radius: 0.52
 --- !u!114 &330585549
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -293,7 +271,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a97c297f21e3b2248b0785ee7d112471, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RotateWithMouse
-  sens: 1000
+  sens: 40
   isEnabled: 0
 --- !u!114 &330585550
 MonoBehaviour:
@@ -307,7 +285,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d8dacb8819e5d2f40be6050bf1a282c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Move
-  moveSpeed: 0.25
+  moveSpeed: 0.1
 --- !u!114 &330585551
 MonoBehaviour:
   m_ObjectHideFlags: 0

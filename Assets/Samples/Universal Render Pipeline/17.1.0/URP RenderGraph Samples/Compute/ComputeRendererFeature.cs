@@ -142,8 +142,8 @@ public class ComputeRendererFeature : ScriptableRendererFeature
             cgContext.cmd.SetComputeBufferParam(data.cs, kernel, "Spheres", data.Spheres);
             cgContext.cmd.SetComputeTextureParam(data.cs, kernel, "Result", data.resultTexture);
 
-            int threadGroupsX = Mathf.CeilToInt(Camera.main.pixelWidth / 32.0f);
-            int threadGroupsY = Mathf.CeilToInt(Camera.main.pixelHeight / 32.0f);
+            int threadGroupsX = Mathf.CeilToInt(Screen.width / 32.0f);
+            int threadGroupsY = Mathf.CeilToInt(Screen.height / 32.0f);
 
             // Dispaches the compute shader with a given kernel as entrypoint.
             // The amount of thread groups determine how many groups to execute of the kernel.

@@ -21,9 +21,7 @@ public class RotateWithMouse : MonoBehaviour
 
     public void Enable(InputAction.CallbackContext callback)
     {
-        Debug.Log(callback.ToString());
-        var val = callback.ReadValue<int>();
-        Debug.Log(val);
+        var val = callback.ReadValue<float>();
         if (val == 1)
         {
             isEnabled = true;
