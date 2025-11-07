@@ -8,6 +8,7 @@ public class DLAMaster : MonoBehaviour
     [SerializeField] private int pointAmount;
 
     [SerializeField] private Bounds bounds;
+    [SerializeField] private Vector3 voxelSize;
 
     private GraphicsBuffer pointComputeBuffer;
     private Point[] cpuData;
@@ -46,6 +47,7 @@ public class DLAMaster : MonoBehaviour
         SetBuffer();
 
         pointComputeShader.SetFloat("deltaTime", Time.deltaTime);
+        pointComputeShader.SetVector("voxelSize", voxelSize);
 
         pointComputeShader.SetFloat("seed", seed);
     }
@@ -62,7 +64,7 @@ public class DLAMaster : MonoBehaviour
     {
         SetData();
 
-        int numThreads = 1;
+        int numThreads = 8;
         int groups = Mathf.CeilToInt((float)pointAmount / (float)numThreads);
 
         pointComputeShader.Dispatch(0, groups, 1, 1);

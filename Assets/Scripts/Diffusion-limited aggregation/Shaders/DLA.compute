@@ -5,6 +5,7 @@ struct Point
 {
     float3 position;
     uint isSolid;
+    uint exists;
 };
 
 // Create a RenderTexture with enableRandomWrite flag and set it
@@ -19,26 +20,63 @@ cbuffer Params
     float3 seedPoint;
     
     float radius;
-    float3 voxelSize;
-    
-    
+    float3 voxelSize;    
+    int gridResolution;
 };
 
-float nrand(float2 uv)
+float Random01(float2 p)
 {
-    return frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453);
+    p = frac(p * float2(123.34, 456.21));
+    p += dot(p, p + 45.32);
+    return frac(p.x * p.y);
+}
+float RandomRange(float2 p, float min, float max)
+{
+    float size = max - min;
+    
+    p = frac(p * float2(123.34, 456.21));
+    p += dot(p, p + 45.32);
+    
+    return (frac(p.x * p.y) * size) + min;
 }
 
+uint GetPointIDOnGrid(int x, int y, int z)
+{
+    return (uint) (x + y * gridResolution + z * gridResolution * gridResolution);
+}
 
-[numthreads(1, 1, 1)]
+float3 RandomMove(float2 p)
+{
+    float chance = RandomRange(p, 0, 6);
+    if (chance <= 1)
+        return float3(voxelSize.x, 0, 0);
+    if (chance <= 2)
+        return float3(-voxelSize.x, 0, 0);
+    if (chance <= 3)
+        return float3(0, voxelSize.y, 0);
+    if (chance <= 4)
+        return float3(0, -voxelSize.y, 0);
+    if (chance <= 5)
+        return float3(0, 0, voxelSize.z);
+    if (chance <= 6)
+        return float3(0, 0, -voxelSize.z);
+
+    return float3(0,0,0);
+}
+
+[numthreads(8, 1, 1)]
 void CSMain(uint3 id : SV_DispatchThreadID)
 {
-    float r = nrand(float2(seed+id.x, deltaTime));
+    if (points[id.x].exists != 0)
+        return;
+    float r = Random01(float2(seed + id.x, deltaTime));
     Point p;
-    p.position = float3(nrand(float2(seed + id.x, deltaTime)), 
-                        nrand(float2(seed + id.x, -deltaTime)), 
-                        nrand(float2(-seed + id.x, deltaTime)));
-    p.position *= 10;
+    p.position = float3(RandomRange(float2(seed + id.x, deltaTime), -2, 5),
+                        RandomRange(float2(seed + id.x, -deltaTime), -2, 5),
+                        RandomRange(float2(-seed + id.x, deltaTime), -2, 5));
+    
+    RandomMove(float2(seed + id.x, deltaTime));
+    
     p.isSolid = 0;
     points[id.x] = p;
 }

@@ -16,7 +16,7 @@ MonoBehaviour:
   computeShader: {fileID: 7200000, guid: 66938a7965781c34ea412207b18dc42d, type: 3}
   material: {fileID: 2100000, guid: 40ca6b48e2e7a764fb5b4f93b9f9beb1, type: 2}
   radius: 0.3
-  smoothing: 0.6
+  smoothing: 0.04
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0

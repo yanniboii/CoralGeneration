@@ -197,7 +197,14 @@ float4 SDFScene(float3 pos){
         Sphere sphere = Spheres[i];
         float distanceToSphere = SDFSphere(pos, sphere.position, sRadius);
         
-        sceneResult = sminRootWithColor(sceneResult.distance, sceneResult.color, distanceToSphere, float3(0,1,0), smoothing);
+        if (sphere.isSolid)
+        {
+            sceneResult = sminRootWithColor(sceneResult.distance, sceneResult.color, distanceToSphere, float3(1,0,0), smoothing);
+        }
+        else
+        {
+            sceneResult = sminRootWithColor(sceneResult.distance, sceneResult.color, distanceToSphere, float3(0,1,0), smoothing);
+        }
         
     }
 
