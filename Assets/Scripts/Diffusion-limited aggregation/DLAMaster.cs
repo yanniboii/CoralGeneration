@@ -29,6 +29,7 @@ public class DLAMaster : MonoBehaviour
 
     private void Update()
     {
+        if(Time.frameCount < 5) 
         UpdateDispatch();
     }
 

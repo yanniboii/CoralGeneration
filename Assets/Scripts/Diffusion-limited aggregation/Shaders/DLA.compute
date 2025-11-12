@@ -73,7 +73,7 @@ void Move(float id)
 
     for (int j = 0; j < numStructs; j++)
     {
-        if(points[j].isSolid != 1)
+        if(points[id].isSolid != 1)
             return;
         
         if (length(abs(float3((points[id].position - points[j].position))) < length(voxelSize)))
