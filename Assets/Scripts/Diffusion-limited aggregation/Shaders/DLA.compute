@@ -1,5 +1,6 @@
 // Each #kernel tells which function to compile; you can have many kernels
-#pragma kernel CSMain
+#pragma kernel GeneratePoints
+#pragma kernel MovePoints
 
 struct Point
 {
@@ -8,14 +9,12 @@ struct Point
     uint exists;
 };
 
-// Create a RenderTexture with enableRandomWrite flag and set it
-// with cs.SetTexture
 RWStructuredBuffer<Point> points;
 
 cbuffer Params
 {
     float seed;
-    float deltaTime;
+    float realtimeSinceStartup;
     
     float3 seedPoint;
     
@@ -24,30 +23,29 @@ cbuffer Params
     int gridResolution;
 };
 
-float Random01(float2 p)
-{
-    p = frac(p * float2(123.34, 456.21));
-    p += dot(p, p + 45.32);
-    return frac(p.x * p.y);
-}
-float RandomRange(float2 p, float min, float max)
-{
-    float size = max - min;
-    
-    p = frac(p * float2(123.34, 456.21));
-    p += dot(p, p + 45.32);
-    
-    return (frac(p.x * p.y) * size) + min;
-}
 
 uint GetPointIDOnGrid(int x, int y, int z)
 {
     return (uint) (x + y * gridResolution + z * gridResolution * gridResolution);
 }
 
+float Random(float2 co)
+{
+    return (frac(sin(dot(co.xy, float2(12.9898, 78.233))) * 43758.5453)) * 1;
+}
+
+float3 RandomFloat3(float id)
+{
+    return float3(Random(float2(id.x * 37.0 + seed, realtimeSinceStartup * 0.123)),
+                        Random(float2(id.x * 57.0 + seed, realtimeSinceStartup * 0.345)),
+                        Random(float2(id.x * 97.0 + seed, realtimeSinceStartup * 0.567)));
+}
+
 float3 RandomMove(float2 p)
 {
-    float chance = RandomRange(p, 0, 6);
+    float chance = Random(p);
+    chance = lerp(0, 6, chance);
+    
     if (chance <= 1)
         return float3(voxelSize.x, 0, 0);
     if (chance <= 2)
@@ -61,22 +59,52 @@ float3 RandomMove(float2 p)
     if (chance <= 6)
         return float3(0, 0, -voxelSize.z);
 
-    return float3(0,0,0);
+    return float3(0, 0, 0);
+}
+
+void Move(float id)
+{
+    uint numStructs, stride;
+    points.GetDimensions(numStructs, stride);
+    
+    float step = RandomMove(id);
+
+    points[id].position += step;
+
+    for (int j = 0; j < numStructs; j++)
+    {
+        if(points[j].isSolid != 1)
+            return;
+        
+        if (length(abs(float3((points[id].position - points[j].position))) < length(voxelSize)))
+        {
+            points[id].isSolid = 1;
+            break;
+        }
+    }
+    
 }
 
 [numthreads(8, 1, 1)]
-void CSMain(uint3 id : SV_DispatchThreadID)
-{
-    if (points[id.x].exists != 0)
-        return;
-    float r = Random01(float2(seed + id.x, deltaTime));
+void GeneratePoints(uint3 id : SV_DispatchThreadID)
+{    
     Point p;
-    p.position = float3(RandomRange(float2(seed + id.x, deltaTime), -2, 5),
-                        RandomRange(float2(seed + id.x, -deltaTime), -2, 5),
-                        RandomRange(float2(-seed + id.x, deltaTime), -2, 5));
+        
+    float3 randomPosition = RandomFloat3(id.x);
+    float3 scaledPosition = lerp(float3(-1, -1, -1), float3(1, 1, 1), randomPosition);
     
-    RandomMove(float2(seed + id.x, deltaTime));
-    
+    p.position = scaledPosition;
     p.isSolid = 0;
+    p.exists = 1;
+        
     points[id.x] = p;
+}
+
+[numthreads(8, 1, 1)]
+void MovePoints(uint3 id : SV_DispatchThreadID)
+{    
+    if(points[id.x].exists != 1 && points[id.x].isSolid != 0)
+        return;
+    
+    Move(id.x);
 }

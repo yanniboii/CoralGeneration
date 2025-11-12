@@ -24,7 +24,12 @@ public class DLAMaster : MonoBehaviour
         seed = Random.Range(0, 10000);
         CreateBuffer();
 
-        Dispatch();
+        StartDispatch();
+    }
+
+    private void Update()
+    {
+        UpdateDispatch();
     }
 
     private void OnDestroy()
@@ -37,16 +42,14 @@ public class DLAMaster : MonoBehaviour
         pointComputeBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, pointAmount, Point.GetSize());
     }
 
-    void SetBuffer()
+    void SetBuffer(string kernel)
     {
-        pointComputeShader.SetBuffer(0, "points", pointComputeBuffer);
+        pointComputeShader.SetBuffer(pointComputeShader.FindKernel(kernel), "points", pointComputeBuffer);
     }
 
     void SetData()
     {
-        SetBuffer();
-
-        pointComputeShader.SetFloat("deltaTime", Time.deltaTime);
+        pointComputeShader.SetFloat("realtimeSinceStartup", Time.realtimeSinceStartup);
         pointComputeShader.SetVector("voxelSize", voxelSize);
 
         pointComputeShader.SetFloat("seed", seed);
@@ -60,14 +63,40 @@ public class DLAMaster : MonoBehaviour
         pointComputeBuffer.GetData(cpuData);
     }
 
-    void Dispatch()
+    void StartDispatch()
     {
+        SetBuffer("GeneratePoints");
         SetData();
 
-        int numThreads = 8;
-        int groups = Mathf.CeilToInt((float)pointAmount / (float)numThreads);
+        float threadAmount = pointAmount / 1.0f;
 
-        pointComputeShader.Dispatch(0, groups, 1, 1);
+        int numThreads = 8;
+        int groupsX = Mathf.CeilToInt((float)threadAmount / (float)numThreads);
+        int groupsY = Mathf.CeilToInt((float)threadAmount / (float)numThreads);
+        int groupsZ = Mathf.CeilToInt((float)threadAmount / (float)numThreads);
+
+        pointComputeShader.Dispatch(pointComputeShader.FindKernel("GeneratePoints"), groupsX, 1, 1);
+
+        GetData();
+        for (int i = 0; i < pointAmount; i++)
+        {
+            Debug.Log($"float {i}: \nPos={cpuData[i].position}");
+        }
+    }
+
+    void UpdateDispatch()
+    {
+        SetBuffer("MovePoints");
+        SetData();
+
+        float threadAmount = pointAmount / 1.0f;
+
+        int numThreads = 8;
+        int groupsX = Mathf.CeilToInt((float)threadAmount / (float)numThreads);
+        int groupsY = Mathf.CeilToInt((float)threadAmount / (float)numThreads);
+        int groupsZ = Mathf.CeilToInt((float)threadAmount / (float)numThreads);
+
+        pointComputeShader.Dispatch(pointComputeShader.FindKernel("MovePoints"), groupsX, 1, 1);
 
         GetData();
         for (int i = 0; i < pointAmount; i++)
@@ -90,6 +119,6 @@ struct Point
 {
     public Vector3 position;
     public uint isSolid;
-
-    public static int GetSize() { return (sizeof(float) * 3) + sizeof(uint); }
+    public uint exists;
+    public static int GetSize() { return (sizeof(float) * 3) + (sizeof(uint) * 2); }
 };

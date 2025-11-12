@@ -36,6 +36,7 @@ struct SDFResult {
 struct Sphere {
     float3 position;
     uint isSolid;
+    uint exists;
 };
 
 struct Cube{
@@ -273,6 +274,66 @@ float repeated(float3 pos){
     return SDFScene(pos.x);
 }
 
+float Random01(float2 p)
+{
+    p = frac(p * float2(123.34, 456.21));
+    p += dot(p, p + 45.32);
+    return frac(p.x * p.y);
+}
+
+float hash2(float2 p)
+{
+    p = frac(p * float2(123.34, 345.45));
+    p += dot(p, p + 34.345);
+    return frac(p.x * p.y);
+}
+
+float Hash21(float2 p)
+{
+    // mix with large primes to break alignment
+    uint n = (uint) (p.x * 73856093.0) ^ (uint) (p.y * 19349663.0);
+    n = (n ^ 61u) ^ (n >> 16);
+    n += n << 3;
+    n ^= n >> 4;
+    n *= 0x27d4eb2du;
+    n ^= n >> 15;
+    return (float) n * (1.0 / 4294967296.0);
+}
+
+float Hash212(float2 p)
+{
+    float n = dot(p, float2(127.1, 311.7));
+    return frac(sin(n) * 43758.5453);
+}
+
+float Hash213(float2 p)
+{
+    // convert to uint space (works for positive p)
+    uint n = asuint(p.x) * 1664525u + asuint(p.y) * 1013904223u;
+    n ^= (n >> 16);
+    n *= 2246822519u;
+    n ^= (n >> 13);
+    return (float) n * (1.0 / 4294967296.0);
+}
+
+float rand_hash(float x)
+{
+    // Convert float to uint bits, mix with integer hash ops
+    uint n = asuint(x) + 0x9E3779B9u; // add golden constant to break patterns
+    n ^= n >> 16;
+    n *= 0x7feb352du;
+    n ^= n >> 15;
+    n *= 0x846ca68bu;
+    n ^= n >> 16;
+    // Normalize to [0,1)
+    return (float) n * (1.0 / 4294967296.0); // divide by 2^32
+}
+
+float Random(float2 co)
+{
+    return (frac(sin(dot(co.xy, float2(12.9898, 78.233))) * 43758.5453)) * 1;
+}
+
 [numthreads(32,32,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
@@ -303,5 +364,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         ray.origin += ray.direction * dst;
         rayDst += dst;
     }
+
+    //Result[id.xy] = Random(id.xy);
 
 }
