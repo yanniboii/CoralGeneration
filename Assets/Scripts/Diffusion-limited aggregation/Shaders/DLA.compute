@@ -29,6 +29,17 @@ uint GetPointIDOnGrid(int x, int y, int z)
     return (uint) (x + y * gridResolution + z * gridResolution * gridResolution);
 }
 
+float3 GetPointFromGridID(uint gridID)
+{
+    float3 p;
+    
+    p.x = gridID % gridResolution;
+    p.y = (gridID / gridResolution) % gridResolution;
+    p.z = gridID / (gridResolution * gridResolution);
+    
+    return p;
+}
+
 float Random(float2 co)
 {
     return (frac(sin(dot(co.xy, float2(12.9898, 78.233))) * 43758.5453)) * 1;
@@ -64,16 +75,19 @@ float3 RandomMove(float2 p)
 
 void Move(float id)
 {
+    if (points[id].isSolid == 1)
+        return;
+    
     uint numStructs, stride;
     points.GetDimensions(numStructs, stride);
     
-    float step = RandomMove(id);
+    float step = RandomMove(float2(id * 79.0 + seed, realtimeSinceStartup * 0.3435));
 
     points[id].position += step;
 
-    for (int j = 0; j < numStructs; j++)
+    for (uint j = 0; j < numStructs; j++)
     {
-        if(points[id].isSolid != 1)
+        if(points[j].isSolid != 1)
             return;
         
         if (length(abs(float3((points[id].position - points[j].position))) < length(voxelSize)))
@@ -91,20 +105,30 @@ void GeneratePoints(uint3 id : SV_DispatchThreadID)
     Point p;
         
     float3 randomPosition = RandomFloat3(id.x);
-    float3 scaledPosition = lerp(float3(-1, -1, -1), float3(1, 1, 1), randomPosition);
+    float3 scaledPosition = lerp(float3(0,0,0), float3(5, 5, 5), randomPosition);
     
-    p.position = scaledPosition;
+
+    scaledPosition = floor(scaledPosition);
+    uint gridPos = GetPointIDOnGrid(scaledPosition.x,scaledPosition.y,scaledPosition.z);
+    
+    p.position = GetPointFromGridID(gridPos);
     p.isSolid = 0;
     p.exists = 1;
-        
+    
     points[id.x] = p;
 }
 
 [numthreads(8, 1, 1)]
 void MovePoints(uint3 id : SV_DispatchThreadID)
 {    
-    if(points[id.x].exists != 1 && points[id.x].isSolid != 0)
+    if (points[id.x].isSolid == 1)
+        return;
+    
+    if(points[id.x].exists == 0)
         return;
     
     Move(id.x);
+    
+    uint newGridPos = GetPointIDOnGrid(points[id.x].position.x, points[id.x].position.y, points[id.x].position.z);
+    points[id.x].position = GetPointFromGridID(newGridPos);
 }

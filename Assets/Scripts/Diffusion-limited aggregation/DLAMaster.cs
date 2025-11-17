@@ -9,6 +9,7 @@ public class DLAMaster : MonoBehaviour
 
     [SerializeField] private Bounds bounds;
     [SerializeField] private Vector3 voxelSize;
+    [SerializeField] private int gridResolution;
 
     private GraphicsBuffer pointComputeBuffer;
     private Point[] cpuData;
@@ -29,7 +30,6 @@ public class DLAMaster : MonoBehaviour
 
     private void Update()
     {
-        if(Time.frameCount < 5) 
         UpdateDispatch();
     }
 
@@ -52,6 +52,8 @@ public class DLAMaster : MonoBehaviour
     {
         pointComputeShader.SetFloat("realtimeSinceStartup", Time.realtimeSinceStartup);
         pointComputeShader.SetVector("voxelSize", voxelSize);
+        pointComputeShader.SetInt("gridResolution", gridResolution);
+        pointComputeShader.SetVector("seedPoint", bounds.center);
 
         pointComputeShader.SetFloat("seed", seed);
     }
