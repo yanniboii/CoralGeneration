@@ -99,9 +99,25 @@ void Move(float id)
     
 }
 
+void SetFirstPoint()
+{
+    Point p;
+        
+    p.position = seedPoint;
+    p.isSolid = 0;
+    p.exists = 1;
+        
+    points[0] = p;
+}
+
 [numthreads(8, 1, 1)]
 void GeneratePoints(uint3 id : SV_DispatchThreadID)
 {    
+    if (id.x == 0)
+    {
+        SetFirstPoint();
+        return;
+    }
     Point p;
         
     float3 randomPosition = RandomFloat3(id.x);

@@ -80,11 +80,11 @@ public class DLAMaster : MonoBehaviour
 
         pointComputeShader.Dispatch(pointComputeShader.FindKernel("GeneratePoints"), groupsX, 1, 1);
 
-        GetData();
-        for (int i = 0; i < pointAmount; i++)
-        {
-            Debug.Log($"float {i}: \nPos={cpuData[i].position}");
-        }
+        //GetData();
+        //for (int i = 0; i < pointAmount; i++)
+        //{
+        //    Debug.Log($"float {i}: \nPos={cpuData[i].position}");
+        //}
     }
 
     void UpdateDispatch()
@@ -101,11 +101,11 @@ public class DLAMaster : MonoBehaviour
 
         pointComputeShader.Dispatch(pointComputeShader.FindKernel("MovePoints"), groupsX, 1, 1);
 
-        GetData();
-        for (int i = 0; i < pointAmount; i++)
-        {
-            Debug.Log($"float {i}: \nPos={cpuData[i].position}");
-        }
+        //GetData();
+        //for (int i = 0; i < pointAmount; i++)
+        //{
+        //    Debug.Log($"float {i}: \nPos={cpuData[i].position}");
+        //}
     }
 
     private void OnDisable()

@@ -1,0 +1,20 @@
+1. calculate the sign of each edge.
+
+2. look the two signes of a edge are flipped.
+
+3. look where on a line with flipped signes is the 0 and get the normal.
+
+4. use the quadratic error function to get the best vertex position.
+
+5. The last step is to triangulate.
+
+Solution:
+1. run the signed distance function for each edge.
+
+2. look if two edges have flipped edges and save the edge.
+
+3. use linear interpolation to find the point on the edge where the signed distance is 0 for an sdf the normal is the gradient so also calculate the gradient.
+
+4. solve the quadratic error function // more research required no idea what this means
+
+5. triangulate // more research required
