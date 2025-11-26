@@ -152,7 +152,7 @@ public class ComputeRendererFeature : ScriptableRendererFeature
 
         static void CreateScene(PassData data, ComputeGraphContext cgContext)
         {
-            cgContext.cmd.SetComputeIntParam(data.cs, "_NumSpheres", DLAMaster.Instance.GetPointAmount());
+            cgContext.cmd.SetComputeIntParam(data.cs, "_NumSpheres", DLAMaster.Instance.pointAmount);
 
             cgContext.cmd.SetComputeFloatParam(data.cs, "smoothing", data.smoothing);
             cgContext.cmd.SetComputeFloatParam(data.cs, "sRadius", data.radius);
@@ -183,6 +183,7 @@ public class ComputeRendererFeature : ScriptableRendererFeature
     [SerializeField]
     float smoothing;
 
+    public float _Radius => radius;
     /// <inheritdoc/>
     public override void Create()
     {

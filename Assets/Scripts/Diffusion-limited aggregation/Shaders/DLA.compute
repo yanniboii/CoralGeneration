@@ -81,7 +81,7 @@ void Move(float id)
     uint numStructs, stride;
     points.GetDimensions(numStructs, stride);
     
-    float step = RandomMove(float2(id * 79.0 + seed, realtimeSinceStartup * 0.3435));
+    float3 step = RandomMove(float2(id * 79.0 + seed, realtimeSinceStartup * 0.3435));
 
     points[id].position += step;
 

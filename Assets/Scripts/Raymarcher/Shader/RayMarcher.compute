@@ -271,7 +271,7 @@ float3 ADS(Ray ray, float dst, float3 col){
 //Repetition
 //////////////////////////////////////////////////////////////////////////////////
 float repeated(float3 pos){
-    return SDFScene(pos.x);
+    return SDFScene(pos);
 }
 
 float Random01(float2 p)

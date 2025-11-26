@@ -5,11 +5,16 @@ public class DLAMaster : MonoBehaviour
     public static DLAMaster Instance { get; private set; }
 
     [SerializeField] private ComputeShader pointComputeShader;
-    [SerializeField] private int pointAmount;
+    [SerializeField] private int m_pointAmount;
 
-    [SerializeField] private Bounds bounds;
-    [SerializeField] private Vector3 voxelSize;
-    [SerializeField] private int gridResolution;
+    [SerializeField] private Bounds m_bounds;
+    [SerializeField] private Vector3 m_voxelSize;
+    [SerializeField] private int m_gridDivisions;
+
+    public Bounds bounds => m_bounds;
+    public Vector3 voxelSize => m_voxelSize;
+    public int gridDivisions => m_gridDivisions;
+    public int pointAmount => m_pointAmount;
 
     private GraphicsBuffer pointComputeBuffer;
     private Point[] cpuData;
@@ -40,7 +45,7 @@ public class DLAMaster : MonoBehaviour
 
     void CreateBuffer()
     {
-        pointComputeBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, pointAmount, Point.GetSize());
+        pointComputeBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, m_pointAmount, Point.GetSize());
     }
 
     void SetBuffer(string kernel)
@@ -51,9 +56,9 @@ public class DLAMaster : MonoBehaviour
     void SetData()
     {
         pointComputeShader.SetFloat("realtimeSinceStartup", Time.realtimeSinceStartup);
-        pointComputeShader.SetVector("voxelSize", voxelSize);
-        pointComputeShader.SetInt("gridResolution", gridResolution);
-        pointComputeShader.SetVector("seedPoint", bounds.center);
+        pointComputeShader.SetVector("voxelSize", m_voxelSize);
+        pointComputeShader.SetInt("gridResolution", m_gridDivisions);
+        pointComputeShader.SetVector("seedPoint", m_bounds.center);
 
         pointComputeShader.SetFloat("seed", seed);
     }
@@ -61,7 +66,7 @@ public class DLAMaster : MonoBehaviour
     void GetData()
     {
         if (cpuData == null)
-            cpuData = new Point[pointAmount];
+            cpuData = new Point[m_pointAmount];
 
         pointComputeBuffer.GetData(cpuData);
     }
@@ -71,12 +76,10 @@ public class DLAMaster : MonoBehaviour
         SetBuffer("GeneratePoints");
         SetData();
 
-        float threadAmount = pointAmount / 1.0f;
-
         int numThreads = 8;
-        int groupsX = Mathf.CeilToInt((float)threadAmount / (float)numThreads);
-        int groupsY = Mathf.CeilToInt((float)threadAmount / (float)numThreads);
-        int groupsZ = Mathf.CeilToInt((float)threadAmount / (float)numThreads);
+        int groupsX = Mathf.CeilToInt((float)m_pointAmount / (float)numThreads);
+        int groupsY = Mathf.CeilToInt((float)m_pointAmount / (float)numThreads);
+        int groupsZ = Mathf.CeilToInt((float)m_pointAmount / (float)numThreads);
 
         pointComputeShader.Dispatch(pointComputeShader.FindKernel("GeneratePoints"), groupsX, 1, 1);
 
@@ -92,12 +95,10 @@ public class DLAMaster : MonoBehaviour
         SetBuffer("MovePoints");
         SetData();
 
-        float threadAmount = pointAmount / 1.0f;
-
         int numThreads = 8;
-        int groupsX = Mathf.CeilToInt((float)threadAmount / (float)numThreads);
-        int groupsY = Mathf.CeilToInt((float)threadAmount / (float)numThreads);
-        int groupsZ = Mathf.CeilToInt((float)threadAmount / (float)numThreads);
+        int groupsX = Mathf.CeilToInt((float)m_pointAmount / (float)numThreads);
+        int groupsY = Mathf.CeilToInt((float)m_pointAmount / (float)numThreads);
+        int groupsZ = Mathf.CeilToInt((float)m_pointAmount / (float)numThreads);
 
         pointComputeShader.Dispatch(pointComputeShader.FindKernel("MovePoints"), groupsX, 1, 1);
 
@@ -114,9 +115,6 @@ public class DLAMaster : MonoBehaviour
     }
 
     public GraphicsBuffer GetComputeBuffer() { return pointComputeBuffer; }
-    public int GetPointAmount() { return pointAmount; }
-
-
 }
 struct Point
 {

@@ -1,0 +1,151 @@
+// Each #kernel tells which function to compile; you can have many kernels
+
+// Kernel's
+// ====================================================================================
+#if 1
+
+#pragma kernel SampleSDF
+#pragma kernel CheckSignFlips
+#pragma kernel ExtractHermiteData
+#pragma kernel SolveQEF
+#pragma kernel Triangulate
+
+#endif
+// ====================================================================================
+
+// General
+// ====================================================================================
+#if 1 
+struct Hermite
+{
+    float3 position;
+    float3 normal;
+};
+
+struct Sphere
+{
+    float3 position;
+    uint isSolid;
+    uint exists;
+};
+
+RWStructuredBuffer<float> sdfValues;
+RWStructuredBuffer<uint> activeCells;
+RWStructuredBuffer<Hermite> hermiteData;
+RWStructuredBuffer<float3> cellVertices;
+RWStructuredBuffer<uint3> triangles;
+
+StructuredBuffer<Sphere> Spheres;
+
+cbuffer Params
+{
+    int gridResolution;
+    float sRadius;
+    float smoothing;
+    int _NumSpheres;
+};
+
+uint GetPointIDOnGrid(int x, int y, int z)
+{
+    return (uint) (x + y * gridResolution + z * gridResolution * gridResolution);
+}
+
+float3 GetPointFromGridID(uint gridID)
+{
+    float3 p;
+    
+    p.x = gridID % gridResolution;
+    p.y = (gridID / gridResolution) % gridResolution;
+    p.z = gridID / (gridResolution * gridResolution);
+    
+    return p;
+}
+
+#endif
+
+// Sample SDF's
+// ====================================================================================
+#if 1
+
+// Calculates the SDF of a sphere
+float SDFSphere(float3 pos, float3 centre, float radius)
+{
+    return length(centre - pos) - radius;
+}
+
+// Gives the minum of 2 SDF's
+// Visuel: they merge
+float smin(float a, float b, float k)
+{
+    k *= 1.0;
+    float r = exp2(-a / k) + exp2(-b / k);
+    return -k * log2(r);
+}
+
+float SDFScene(float3 pos)
+{
+    float maxDistance = 1000.0;
+    float distance;
+    distance = maxDistance;
+    
+    for (int i = 0; i < _NumSpheres; i++)
+    {
+        Sphere sphere = Spheres[i];
+        float distanceToSphere = SDFSphere(pos, sphere.position, sRadius);
+
+        distance = smin(distance, distanceToSphere, smoothing);
+
+    }
+    return distance;
+}
+
+[numthreads(8,8,8)]
+void SampleSDF(uint3 id : SV_DispatchThreadID)
+{
+    sdfValues[GetPointIDOnGrid(id.x, id.y, id.z)] = SDFScene(id);
+}
+#endif
+
+// CheckSignFlips
+// ====================================================================================
+#if 1
+[numthreads(8, 8, 8)]
+void CheckSignFlips(uint3 id : SV_DispatchThreadID)
+{
+
+}
+
+#endif
+// ExtractHermiteData
+// ====================================================================================
+#if 1
+
+[numthreads(8, 8, 8)]
+void ExtractHermiteData(uint3 id : SV_DispatchThreadID)
+{
+
+}
+
+#endif
+// SolveQEF
+// ====================================================================================
+#if 1
+
+[numthreads(8, 8, 8)]
+void SolveQEF(uint3 id : SV_DispatchThreadID)
+{
+
+}
+
+#endif
+// Triangulate
+// ====================================================================================
+#if 1
+
+[numthreads(8, 8, 8)]
+void Triangulate(uint3 id : SV_DispatchThreadID)
+{
+
+}
+
+#endif
