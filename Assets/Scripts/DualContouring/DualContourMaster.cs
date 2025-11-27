@@ -64,6 +64,8 @@ public class DualContourMaster : MonoBehaviour
     {
         dualContourShader.SetFloat("realtimeSinceStartup", Time.realtimeSinceStartup);
         dualContourShader.SetVector("voxelSize", DLAMaster.voxelSize);
+        dualContourShader.SetVector("boundStart", DLAMaster.boundStart);
+        dualContourShader.SetVector("boundEnd", DLAMaster.boundEnd);
         dualContourShader.SetInt("gridResolution", DLAMaster.gridDivisions);
         dualContourShader.SetInt("_NumSpheres", DLAMaster.pointAmount);
         dualContourShader.SetFloat("sRadius", 0.3f);
@@ -85,8 +87,6 @@ public class DualContourMaster : MonoBehaviour
         SetSDFBuffers();
         SetData();
 
-        // for each division 1 cube gets divided by 8 and in this dispatch I need to sample each corner so times 8 again;
-
         int numThreads = 8;
         int groupsX = Mathf.CeilToInt((float)gridCorners / (float)numThreads);
         int groupsY = Mathf.CeilToInt((float)gridCorners / (float)numThreads);
@@ -97,7 +97,13 @@ public class DualContourMaster : MonoBehaviour
         GetData();
         for (int i = 0; i < gridCorners; i++)
         {
-            Debug.Log($"float {i}: \nPos={cpuData[i]}");
+            //if (cpuData[i] > 0)
+            //    Debug.Log("plus");
+            //if (cpuData[i] < 0)
+            //    Debug.Log("minus");
+            //if (cpuData[i] == 0)
+            //    Debug.Log("equals");
+            //Debug.Log($"float {i}: \nPos={cpuData[i]}");
         }
     }
 
@@ -123,10 +129,10 @@ public class DualContourMaster : MonoBehaviour
     private void OnDisable()
     {
         sdfValues.Dispose();
-        activeCells.Dispose();
-        hermiteData.Dispose();
-        cellVertices.Dispose();
-        triangles.Dispose();
+        //activeCells.Dispose();
+        //hermiteData.Dispose();
+        //cellVertices.Dispose();
+        //triangles.Dispose();
     }
 }
 

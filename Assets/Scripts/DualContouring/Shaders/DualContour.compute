@@ -43,6 +43,9 @@ cbuffer Params
     float sRadius;
     float smoothing;
     int _NumSpheres;
+    
+    float3 boundStart;
+    float3 boundEnd;
 };
 
 uint GetPointIDOnGrid(int x, int y, int z)
@@ -102,7 +105,8 @@ float SDFScene(float3 pos)
 [numthreads(8,8,8)]
 void SampleSDF(uint3 id : SV_DispatchThreadID)
 {
-    sdfValues[GetPointIDOnGrid(id.x, id.y, id.z)] = SDFScene(id);
+    uint3 scaledSamplePos = lerp(boundStart,boundEnd,id);
+    sdfValues[GetPointIDOnGrid(id.x, id.y, id.z)] = SDFScene(scaledSamplePos);
 }
 #endif
 

@@ -7,12 +7,15 @@ public class DLAMaster : MonoBehaviour
     [SerializeField] private ComputeShader pointComputeShader;
     [SerializeField] private int m_pointAmount;
 
-    [SerializeField] private Bounds m_bounds;
+    [SerializeField] private Vector3 center;
+    [SerializeField] private Vector3 m_BoundStart;
+    [SerializeField] private Vector3 m_BoundEnd;
     [SerializeField] private Vector3 m_voxelSize;
     [SerializeField] private int m_gridDivisions;
 
-    public Bounds bounds => m_bounds;
     public Vector3 voxelSize => m_voxelSize;
+    public Vector3 boundStart => m_BoundStart;
+    public Vector3 boundEnd => m_BoundEnd;
     public int gridDivisions => m_gridDivisions;
     public int pointAmount => m_pointAmount;
 
@@ -58,7 +61,9 @@ public class DLAMaster : MonoBehaviour
         pointComputeShader.SetFloat("realtimeSinceStartup", Time.realtimeSinceStartup);
         pointComputeShader.SetVector("voxelSize", m_voxelSize);
         pointComputeShader.SetInt("gridResolution", m_gridDivisions);
-        pointComputeShader.SetVector("seedPoint", m_bounds.center);
+        pointComputeShader.SetVector("seedPoint", center);
+        pointComputeShader.SetVector("boundStart", m_BoundStart);
+        pointComputeShader.SetVector("boundEnd", m_BoundEnd);
 
         pointComputeShader.SetFloat("seed", seed);
     }

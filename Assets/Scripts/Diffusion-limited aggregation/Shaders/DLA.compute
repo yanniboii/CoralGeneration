@@ -17,6 +17,8 @@ cbuffer Params
     float realtimeSinceStartup;
     
     float3 seedPoint;
+    float3 boundStart;
+    float3 boundEnd;
     
     float radius;
     float3 voxelSize;    
@@ -121,7 +123,7 @@ void GeneratePoints(uint3 id : SV_DispatchThreadID)
     Point p;
         
     float3 randomPosition = RandomFloat3(id.x);
-    float3 scaledPosition = lerp(float3(0,0,0), float3(5, 5, 5), randomPosition);
+    float3 scaledPosition = lerp(boundStart, boundEnd, randomPosition);
     
 
     scaledPosition = floor(scaledPosition);
