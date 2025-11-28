@@ -25,7 +25,9 @@ public class DualContourMaster : MonoBehaviour
     {
         DLAMaster = DLAMaster.Instance;
 
-        gridCorners = (int)Mathf.Pow((DLAMaster.gridDivisions + 2), 3);
+        gridCorners = (int)Mathf.Pow((DLAMaster.gridDivisions + 1), 3);
+        Debug.Log(gridCorners);
+        Debug.Log(Mathf.Pow(gridCorners, (1f / 3f)));
         gridEdges = 3 * (DLAMaster.gridDivisions + 1) * (int)Mathf.Pow(((DLAMaster.gridDivisions + 1) + 1), 2);
 
         dualContourShader = Instantiate(dualContourShader);
@@ -37,7 +39,7 @@ public class DualContourMaster : MonoBehaviour
 
     private void Update()
     {
-        UpdateDispatch();
+        //UpdateDispatch();
     }
 
     private void OnDestroy()
@@ -67,8 +69,10 @@ public class DualContourMaster : MonoBehaviour
         dualContourShader.SetVector("boundStart", DLAMaster.boundStart);
         dualContourShader.SetVector("boundEnd", DLAMaster.boundEnd);
         dualContourShader.SetInt("gridResolution", DLAMaster.gridDivisions);
+        dualContourShader.SetInt("gridCorners", gridCorners);
+        dualContourShader.SetInt("gridEdges", gridEdges);
         dualContourShader.SetInt("_NumSpheres", DLAMaster.pointAmount);
-        dualContourShader.SetFloat("sRadius", 0.3f);
+        dualContourShader.SetFloat("sRadius", 1.4f);
         dualContourShader.SetFloat("smoothing", 0.3f);
 
         dualContourShader.SetFloat("seed", seed);
@@ -97,12 +101,13 @@ public class DualContourMaster : MonoBehaviour
         GetData();
         for (int i = 0; i < gridCorners; i++)
         {
-            //if (cpuData[i] > 0)
-            //    Debug.Log("plus");
-            //if (cpuData[i] < 0)
-            //    Debug.Log("minus");
+            if (cpuData[i] > 0)
+                Debug.Log("plus");
+            if (cpuData[i] < 0)
+                Debug.Log("minus");
             //if (cpuData[i] == 0)
             //    Debug.Log("equals");
+            //Debug.Log(cpuData[i]);
             //Debug.Log($"float {i}: \nPos={cpuData[i]}");
         }
     }
@@ -112,7 +117,7 @@ public class DualContourMaster : MonoBehaviour
         //SetBuffer("MovePoints");
         SetData();
 
-        int numThreads = 8;
+        //int numThreads = 8;
         //int groupsX = Mathf.CeilToInt(m_pointAmount / numThreads);
         //int groupsY = Mathf.CeilToInt(m_pointAmount / numThreads);
         //int groupsZ = Mathf.CeilToInt(m_pointAmount / numThreads);

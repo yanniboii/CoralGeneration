@@ -839,12 +839,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pointComputeShader: {fileID: 7200000, guid: c27d6676ba928174ab48490e98e8b8b6, type: 3}
-  m_pointAmount: 4
-  center: {x: 0, y: 0, z: 0}
+  m_pointAmount: 20
+  center: {x: 1, y: 1, z: 1}
   m_BoundStart: {x: 0, y: 0, z: 0}
   m_BoundEnd: {x: 5, y: 5, z: 5}
-  m_voxelSize: {x: 0.1, y: 0.1, z: 0.1}
-  m_gridDivisions: 15
+  m_voxelSize: {x: 1, y: 1, z: 1}
+  m_gridDivisions: 1
 --- !u!4 &1017765550
 Transform:
   m_ObjectHideFlags: 0

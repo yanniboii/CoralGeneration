@@ -106,7 +106,7 @@ void SetFirstPoint()
     Point p;
         
     p.position = seedPoint;
-    p.isSolid = 0;
+    p.isSolid = 1;
     p.exists = 1;
         
     points[0] = p;

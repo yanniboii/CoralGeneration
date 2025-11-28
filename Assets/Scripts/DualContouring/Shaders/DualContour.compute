@@ -40,6 +40,8 @@ StructuredBuffer<Sphere> Spheres;
 cbuffer Params
 {
     int gridResolution;
+    int gridCorners;
+    int gridEdges;
     float sRadius;
     float smoothing;
     int _NumSpheres;
@@ -64,6 +66,10 @@ float3 GetPointFromGridID(uint gridID)
     return p;
 }
 
+uint GetPointIDOnGridCorner(int x, int y, int z)
+{
+    return (uint) (x + y * gridCorners + z * gridCorners * gridCorners);
+}
 #endif
 
 // Sample SDF's
@@ -105,7 +111,7 @@ float SDFScene(float3 pos)
 [numthreads(8,8,8)]
 void SampleSDF(uint3 id : SV_DispatchThreadID)
 {
-    uint3 scaledSamplePos = lerp(boundStart,boundEnd,id);
+    float3 scaledSamplePos = lerp(boundStart, boundEnd, float3(id) / (gridCorners - 1));
     sdfValues[GetPointIDOnGrid(id.x, id.y, id.z)] = SDFScene(scaledSamplePos);
 }
 #endif
