@@ -114,11 +114,6 @@ public class DLAMaster : MonoBehaviour
         //}
     }
 
-    private void OnDisable()
-    {
-        pointComputeBuffer.Dispose();
-    }
-
     public GraphicsBuffer GetComputeBuffer() { return pointComputeBuffer; }
 }
 struct Point

@@ -1,4 +1,3 @@
-using System;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -53,11 +52,6 @@ public class DualContourMaster : MonoBehaviour
         HermiteDispatch();
     }
 
-    private void Update()
-    {
-        //UpdateDispatch();
-    }
-
     private void OnDestroy()
     {
 
@@ -78,7 +72,7 @@ public class DualContourMaster : MonoBehaviour
         dualContourShader.SetBuffer(dualContourShader.FindKernel("SampleSDF"), "sdfValues", sdfValues);
         dualContourShader.SetBuffer(dualContourShader.FindKernel("SampleSDF"), "Spheres", DLAMaster.GetComputeBuffer());
     }
-   
+
     void SetSDFData()
     {
         dualContourShader.SetFloat("realtimeSinceStartup", Time.realtimeSinceStartup);
@@ -115,8 +109,6 @@ public class DualContourMaster : MonoBehaviour
         int groupsX = Mathf.CeilToInt((float)cornerResolution / (float)numThreads);
         int groupsY = Mathf.CeilToInt((float)cornerResolution / (float)numThreads);
         int groupsZ = Mathf.CeilToInt((float)cornerResolution / (float)numThreads);
-
-        Debug.Log(groupsX + " + " + groupsY + " + " + groupsZ);
 
         dualContourShader.Dispatch(dualContourShader.FindKernel("SampleSDF"), groupsX, groupsY, groupsZ);
 
@@ -174,6 +166,7 @@ public class DualContourMaster : MonoBehaviour
 
     private void SetHermiteBuffers()
     {
+        dualContourShader.SetBuffer(dualContourShader.FindKernel("ExtractHermiteData"), "Spheres", DLAMaster.GetComputeBuffer());
         dualContourShader.SetBuffer(dualContourShader.FindKernel("ExtractHermiteData"), "sdfValues", sdfValues);
         dualContourShader.SetBuffer(dualContourShader.FindKernel("ExtractHermiteData"), "activeCells", activeCells);
         dualContourShader.SetBuffer(dualContourShader.FindKernel("ExtractHermiteData"), "hermiteData", hermiteData);
@@ -195,7 +188,7 @@ public class DualContourMaster : MonoBehaviour
             hermite = new HermiteData[maxHermites];
 
         hermiteData.GetData(hermite);
-        
+
         if (hermiteCount == null)
             hermiteCount = new uint[cellAmount];
 
@@ -208,16 +201,20 @@ public class DualContourMaster : MonoBehaviour
         SetHermiteData();
 
         int numThreads = 8;
-        int groupsX = Mathf.CeilToInt((float)cellAmount / (float)numThreads);
-        int groupsY = Mathf.CeilToInt((float)cellAmount / (float)numThreads);
-        int groupsZ = Mathf.CeilToInt((float)cellAmount / (float)numThreads);
+        int groupsX = Mathf.CeilToInt((float)DLAMaster.gridDivisions / (float)numThreads);
+        int groupsY = Mathf.CeilToInt((float)DLAMaster.gridDivisions / (float)numThreads);
+        int groupsZ = Mathf.CeilToInt((float)DLAMaster.gridDivisions / (float)numThreads);
 
-        dualContourShader.Dispatch(dualContourShader.FindKernel("CheckSignFlips"), groupsX, groupsY, groupsZ);
+        dualContourShader.Dispatch(dualContourShader.FindKernel("ExtractHermiteData"), groupsX, groupsY, groupsZ);
 
         GetHermiteData();
+        for (int i = 0; i < cellAmount * 12; i++)
+        {
+            Debug.Log(i + " : " + hermite[i].position + " : " + hermite[i].normal);
+        }
         for (int i = 0; i < cellAmount; i++)
         {
-            Debug.Log(hermite[i].position + " : " + hermite[i].normal + " : " + hermiteCount[i]);
+            Debug.Log(i + " : " + hermiteCount[i]);
         }
     }
 

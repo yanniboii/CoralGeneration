@@ -844,7 +844,7 @@ MonoBehaviour:
   m_BoundStart: {x: 0, y: 0, z: 0}
   m_BoundEnd: {x: 5, y: 5, z: 5}
   m_voxelSize: {x: 1, y: 1, z: 1}
-  m_gridDivisions: 2
+  m_gridDivisions: 1
 --- !u!4 &1017765550
 Transform:
   m_ObjectHideFlags: 0
