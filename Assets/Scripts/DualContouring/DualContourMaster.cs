@@ -1,3 +1,5 @@
+using System;
+using Unity.Mathematics;
 using UnityEngine;
 
 public class DualContourMaster : MonoBehaviour
@@ -9,14 +11,23 @@ public class DualContourMaster : MonoBehaviour
     private GraphicsBuffer sdfValues;
     private GraphicsBuffer activeCells;
     private GraphicsBuffer hermiteData;
+    private GraphicsBuffer hermiteCounts;
     private GraphicsBuffer cellVertices;
     private GraphicsBuffer triangles;
 
-    private float[] cpuData;
+    private float[] sdfData;
+    private uint[] activeCellData;
+    private HermiteData[] hermite;
+    private uint[] hermiteCount;
+    private Vector3[] cellVertexData;
+    private uint3[] triangleData;
 
     private float seed;
     private int gridCorners;
+    private int cellAmount;
+    private int cornerResolution;
     private int gridEdges;
+    private int maxHermites;
 
     private DLAMaster DLAMaster;
 
@@ -25,16 +36,21 @@ public class DualContourMaster : MonoBehaviour
     {
         DLAMaster = DLAMaster.Instance;
 
-        gridCorners = (int)Mathf.Pow((DLAMaster.gridDivisions + 1), 3);
-        Debug.Log(gridCorners);
-        Debug.Log(Mathf.Pow(gridCorners, (1f / 3f)));
+        cornerResolution = DLAMaster.gridDivisions + 1;
+        gridCorners = (int)Mathf.Pow(cornerResolution, 3);
+        cellAmount = (int)Mathf.Pow(DLAMaster.gridDivisions, 3);
+
         gridEdges = 3 * (DLAMaster.gridDivisions + 1) * (int)Mathf.Pow(((DLAMaster.gridDivisions + 1) + 1), 2);
+
+        maxHermites = cellAmount * 12;
 
         dualContourShader = Instantiate(dualContourShader);
 
         CreateBuffers();
 
         SDFDispatch();
+        SignFlipDispatch();
+        HermiteDispatch();
     }
 
     private void Update()
@@ -50,8 +66,9 @@ public class DualContourMaster : MonoBehaviour
     void CreateBuffers()
     {
         sdfValues = new GraphicsBuffer(GraphicsBuffer.Target.Structured, gridCorners, sizeof(float));
-        activeCells = new GraphicsBuffer(GraphicsBuffer.Target.Structured, gridEdges, sizeof(uint));
-        hermiteData = new GraphicsBuffer(GraphicsBuffer.Target.Structured, gridEdges, HermiteData.GetSize());
+        activeCells = new GraphicsBuffer(GraphicsBuffer.Target.Structured, cellAmount, sizeof(uint));
+        hermiteData = new GraphicsBuffer(GraphicsBuffer.Target.Structured, maxHermites, HermiteData.GetSize());
+        hermiteCounts = new GraphicsBuffer(GraphicsBuffer.Target.Structured, cellAmount, sizeof(uint));
         cellVertices = new GraphicsBuffer(GraphicsBuffer.Target.Structured, gridEdges, sizeof(float) * 3);
         triangles = new GraphicsBuffer(GraphicsBuffer.Target.Structured, gridCorners, sizeof(uint) * 3);
     }
@@ -61,14 +78,15 @@ public class DualContourMaster : MonoBehaviour
         dualContourShader.SetBuffer(dualContourShader.FindKernel("SampleSDF"), "sdfValues", sdfValues);
         dualContourShader.SetBuffer(dualContourShader.FindKernel("SampleSDF"), "Spheres", DLAMaster.GetComputeBuffer());
     }
-
-    void SetData()
+   
+    void SetSDFData()
     {
         dualContourShader.SetFloat("realtimeSinceStartup", Time.realtimeSinceStartup);
         dualContourShader.SetVector("voxelSize", DLAMaster.voxelSize);
         dualContourShader.SetVector("boundStart", DLAMaster.boundStart);
         dualContourShader.SetVector("boundEnd", DLAMaster.boundEnd);
         dualContourShader.SetInt("gridResolution", DLAMaster.gridDivisions);
+        dualContourShader.SetInt("cornerResolution", cornerResolution);
         dualContourShader.SetInt("gridCorners", gridCorners);
         dualContourShader.SetInt("gridEdges", gridEdges);
         dualContourShader.SetInt("_NumSpheres", DLAMaster.pointAmount);
@@ -78,32 +96,36 @@ public class DualContourMaster : MonoBehaviour
         dualContourShader.SetFloat("seed", seed);
     }
 
-    void GetData()
-    {
-        if (cpuData == null)
-            cpuData = new float[gridCorners];
 
-        sdfValues.GetData(cpuData);
+    void GetSDFData()
+    {
+        if (sdfData == null)
+            sdfData = new float[gridCorners];
+
+        sdfValues.GetData(sdfData);
     }
+
 
     void SDFDispatch()
     {
         SetSDFBuffers();
-        SetData();
+        SetSDFData();
 
         int numThreads = 8;
-        int groupsX = Mathf.CeilToInt((float)gridCorners / (float)numThreads);
-        int groupsY = Mathf.CeilToInt((float)gridCorners / (float)numThreads);
-        int groupsZ = Mathf.CeilToInt((float)gridCorners / (float)numThreads);
+        int groupsX = Mathf.CeilToInt((float)cornerResolution / (float)numThreads);
+        int groupsY = Mathf.CeilToInt((float)cornerResolution / (float)numThreads);
+        int groupsZ = Mathf.CeilToInt((float)cornerResolution / (float)numThreads);
+
+        Debug.Log(groupsX + " + " + groupsY + " + " + groupsZ);
 
         dualContourShader.Dispatch(dualContourShader.FindKernel("SampleSDF"), groupsX, groupsY, groupsZ);
 
-        GetData();
+        GetSDFData();
         for (int i = 0; i < gridCorners; i++)
         {
-            if (cpuData[i] > 0)
+            if (sdfData[i] > 0)
                 Debug.Log("plus");
-            if (cpuData[i] < 0)
+            if (sdfData[i] < 0)
                 Debug.Log("minus");
             //if (cpuData[i] == 0)
             //    Debug.Log("equals");
@@ -112,30 +134,99 @@ public class DualContourMaster : MonoBehaviour
         }
     }
 
-    void UpdateDispatch()
+    void SetSignFlipBuffers()
     {
-        //SetBuffer("MovePoints");
-        SetData();
+        dualContourShader.SetBuffer(dualContourShader.FindKernel("CheckSignFlips"), "sdfValues", sdfValues);
+        dualContourShader.SetBuffer(dualContourShader.FindKernel("CheckSignFlips"), "activeCells", activeCells);
+    }
 
-        //int numThreads = 8;
-        //int groupsX = Mathf.CeilToInt(m_pointAmount / numThreads);
-        //int groupsY = Mathf.CeilToInt(m_pointAmount / numThreads);
-        //int groupsZ = Mathf.CeilToInt(m_pointAmount / numThreads);
+    void SetSignFlipData()
+    {
+        dualContourShader.SetInt("gridResolution", DLAMaster.gridDivisions);
+    }
 
-        //dualContourShader.Dispatch(dualContourShader.FindKernel("MovePoints"), groupsX, 1, 1);
+    void GetActiveCellData()
+    {
+        if (activeCellData == null)
+            activeCellData = new uint[cellAmount];
 
-        //GetData();
-        //for (int i = 0; i < pointAmount; i++)
-        //{
-        //    Debug.Log($"float {i}: \nPos={cpuData[i].position}");
-        //}
+        activeCells.GetData(activeCellData);
+    }
+
+    void SignFlipDispatch()
+    {
+        SetSignFlipBuffers();
+        SetSignFlipData();
+
+        int numThreads = 8;
+        int groupsX = Mathf.CeilToInt((float)DLAMaster.gridDivisions / (float)numThreads);
+        int groupsY = Mathf.CeilToInt((float)DLAMaster.gridDivisions / (float)numThreads);
+        int groupsZ = Mathf.CeilToInt((float)DLAMaster.gridDivisions / (float)numThreads);
+
+        dualContourShader.Dispatch(dualContourShader.FindKernel("CheckSignFlips"), groupsX, groupsY, groupsZ);
+
+        GetActiveCellData();
+        for (int i = 0; i < cellAmount; i++)
+        {
+            Debug.Log(activeCellData[i]);
+        }
+    }
+
+    private void SetHermiteBuffers()
+    {
+        dualContourShader.SetBuffer(dualContourShader.FindKernel("ExtractHermiteData"), "sdfValues", sdfValues);
+        dualContourShader.SetBuffer(dualContourShader.FindKernel("ExtractHermiteData"), "activeCells", activeCells);
+        dualContourShader.SetBuffer(dualContourShader.FindKernel("ExtractHermiteData"), "hermiteData", hermiteData);
+        dualContourShader.SetBuffer(dualContourShader.FindKernel("ExtractHermiteData"), "hermiteCounts", hermiteCounts);
+    }
+
+    private void SetHermiteData()
+    {
+        dualContourShader.SetVector("boundStart", DLAMaster.boundStart);
+        dualContourShader.SetVector("boundEnd", DLAMaster.boundEnd);
+        dualContourShader.SetInt("gridResolution", DLAMaster.gridDivisions);
+        dualContourShader.SetInt("cornerResolution", cornerResolution);
+    }
+
+
+    private void GetHermiteData()
+    {
+        if (hermite == null)
+            hermite = new HermiteData[maxHermites];
+
+        hermiteData.GetData(hermite);
+        
+        if (hermiteCount == null)
+            hermiteCount = new uint[cellAmount];
+
+        hermiteCounts.GetData(hermiteCount);
+    }
+
+    void HermiteDispatch()
+    {
+        SetHermiteBuffers();
+        SetHermiteData();
+
+        int numThreads = 8;
+        int groupsX = Mathf.CeilToInt((float)cellAmount / (float)numThreads);
+        int groupsY = Mathf.CeilToInt((float)cellAmount / (float)numThreads);
+        int groupsZ = Mathf.CeilToInt((float)cellAmount / (float)numThreads);
+
+        dualContourShader.Dispatch(dualContourShader.FindKernel("CheckSignFlips"), groupsX, groupsY, groupsZ);
+
+        GetHermiteData();
+        for (int i = 0; i < cellAmount; i++)
+        {
+            Debug.Log(hermite[i].position + " : " + hermite[i].normal + " : " + hermiteCount[i]);
+        }
     }
 
     private void OnDisable()
     {
         sdfValues.Dispose();
-        //activeCells.Dispose();
-        //hermiteData.Dispose();
+        activeCells.Dispose();
+        hermiteCounts.Dispose();
+        hermiteData.Dispose();
         //cellVertices.Dispose();
         //triangles.Dispose();
     }

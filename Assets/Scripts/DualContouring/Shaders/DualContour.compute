@@ -32,6 +32,7 @@ struct Sphere
 RWStructuredBuffer<float> sdfValues;
 RWStructuredBuffer<uint> activeCells;
 RWStructuredBuffer<Hermite> hermiteData;
+RWStructuredBuffer<uint> hermiteCounts;
 RWStructuredBuffer<float3> cellVertices;
 RWStructuredBuffer<uint3> triangles;
 
@@ -40,6 +41,7 @@ StructuredBuffer<Sphere> Spheres;
 cbuffer Params
 {
     int gridResolution;
+    int cornerResolution;
     int gridCorners;
     int gridEdges;
     float sRadius;
@@ -68,8 +70,20 @@ float3 GetPointFromGridID(uint gridID)
 
 uint GetPointIDOnGridCorner(int x, int y, int z)
 {
-    return (uint) (x + y * gridCorners + z * gridCorners * gridCorners);
+    return (uint) (x + y * cornerResolution + z * cornerResolution * cornerResolution);
 }
+
+float3 GetPointFromGridCornerID(uint gridID)
+{
+    float3 p;
+    
+    p.x = gridID % cornerResolution;
+    p.y = (gridID / cornerResolution) % cornerResolution;
+    p.z = gridID / (cornerResolution * cornerResolution);
+    
+    return p;
+}
+
 #endif
 
 // Sample SDF's
@@ -82,8 +96,6 @@ float SDFSphere(float3 pos, float3 centre, float radius)
     return length(centre - pos) - radius;
 }
 
-// Gives the minum of 2 SDF's
-// Visuel: they merge
 float smin(float a, float b, float k)
 {
     k *= 1.0;
@@ -110,19 +122,84 @@ float SDFScene(float3 pos)
 
 [numthreads(8,8,8)]
 void SampleSDF(uint3 id : SV_DispatchThreadID)
-{
-    float3 scaledSamplePos = lerp(boundStart, boundEnd, float3(id) / (gridCorners - 1));
-    sdfValues[GetPointIDOnGrid(id.x, id.y, id.z)] = SDFScene(scaledSamplePos);
+{   
+    if (id.x >= (uint) cornerResolution ||
+        id.y >= (uint) cornerResolution ||
+        id.z >= (uint) cornerResolution)
+        return;
+    
+    int3 gc = int3(id);
+
+    float3 t = float3(gc) / (cornerResolution - 1);
+    float3 worldPos = lerp(boundStart, boundEnd, t);
+    
+    float d = SDFScene(worldPos);
+    
+    uint index = GetPointIDOnGridCorner(gc.x, gc.y, gc.z);
+    sdfValues[index] = d;
 }
 #endif
 
 // CheckSignFlips
 // ====================================================================================
 #if 1
+static const int3 CUBE_CORNERS[8] =
+{
+    int3(0, 0, 0),
+    int3(1, 0, 0),
+    int3(1, 1, 0),
+    int3(0, 1, 0),
+    int3(0, 0, 1),
+    int3(1, 0, 1),
+    int3(1, 1, 1),
+    int3(0, 1, 1)
+};
+
+static const uint2 EDGE_INDEX[12] =
+{
+    uint2(0, 1), uint2(1, 2), uint2(2, 3), uint2(3, 0), // bottom edges
+    uint2(4, 5), uint2(5, 6), uint2(6, 7), uint2(7, 4), // top edges
+    uint2(0, 4), uint2(1, 5), uint2(2, 6), uint2(3, 7) // vertical edges
+};
+
+
 [numthreads(8, 8, 8)]
 void CheckSignFlips(uint3 id : SV_DispatchThreadID)
 {
+    if (id.x >= (uint) gridResolution ||
+        id.y >= (uint) gridResolution ||
+        id.z >= (uint) gridResolution)
+        return;
 
+    int3 cell = int3(id);
+
+    uint cellIndex = GetPointIDOnGrid(cell.x, cell.y, cell.z);
+
+    // Unroll tells the compiler to write the body inline for the amount it is supposed to run instead of creating an actual loop
+    float cornerSDF[8];
+    [unroll]
+    for (int i = 0; i < 8; i++)
+    {
+        int3 c = cell + CUBE_CORNERS[i];
+        uint index = GetPointIDOnGridCorner(c.x, c.y, c.z);
+        cornerSDF[i] = sdfValues[index];
+    }
+
+    bool hasFlip = false;
+    [unroll]
+    for (int e = 0; e < 12; e++)
+    {
+        float a = cornerSDF[EDGE_INDEX[e].x];
+        float b = cornerSDF[EDGE_INDEX[e].y];
+
+        if ((a < 0 && b >= 0) || (a >= 0 && b < 0))
+        {
+            hasFlip = true;
+        }
+    }
+
+    // Mark cell as active
+    activeCells[cellIndex] = hasFlip ? (uint)1 : (uint)0;
 }
 
 #endif
@@ -130,10 +207,76 @@ void CheckSignFlips(uint3 id : SV_DispatchThreadID)
 // ====================================================================================
 #if 1
 
+float3 ComputeNormal(float3 pos)
+{
+    float2 epsilon2 = float2(0.001f, 0.001f);
+    return normalize(float3(SDFScene(pos + epsilon2.xyy) - SDFScene(pos - epsilon2.xyy),
+                            SDFScene(pos + epsilon2.yxy) - SDFScene(pos - epsilon2.yxy),
+                            SDFScene(pos + epsilon2.yyx) - SDFScene(pos - epsilon2.yyx)));
+}
+
+
 [numthreads(8, 8, 8)]
 void ExtractHermiteData(uint3 id : SV_DispatchThreadID)
 {
+    if (id.x >= (uint) gridResolution ||
+        id.y >= (uint) gridResolution ||
+        id.z >= (uint) gridResolution)
+        return;
 
+    int3 cell = int3(id);
+    uint cellIndex = GetPointIDOnGrid(cell.x, cell.y, cell.z);
+
+    if (activeCells[cellIndex] == 0)
+    {
+        hermiteCounts[cellIndex] = 0;
+        return;
+    }
+
+    float cornerSDF[8];
+    float3 cornerPos[8];
+
+    [unroll]
+    for (int i = 0; i < 8; i++)
+    {
+        int3 c = cell + CUBE_CORNERS[i];
+
+        uint cornerIndex = GetPointIDOnGridCorner(c.x, c.y, c.z);
+        cornerSDF[i] = sdfValues[cornerIndex];
+
+        float3 t = float3(c) / (cornerResolution - 1);
+        cornerPos[i] = lerp(boundStart, boundEnd, t);
+    }
+
+    uint count = 0;
+
+    [unroll]
+    for (int e = 0; e < 12; e++)
+    {
+        int c0 = EDGE_INDEX[e].x;
+        int c1 = EDGE_INDEX[e].y;
+
+        float d0 = cornerSDF[c0];
+        float d1 = cornerSDF[c1];
+
+        if ((d0 < 0 && d1 >= 0) || (d0 >= 0 && d1 < 0))
+        {
+            // Compute intersection t parameter
+            float t = d0 / (d0 - d1);
+
+            float3 p = lerp(cornerPos[c0], cornerPos[c1], t);
+
+            float3 n = ComputeNormal(p);
+
+            uint writeIndex = cellIndex * 12 + count;
+            hermiteData[writeIndex].position = p;
+            hermiteData[writeIndex].normal = n;
+
+            count++;
+        }
+    }
+
+    hermiteCounts[cellIndex] = count;
 }
 
 #endif
