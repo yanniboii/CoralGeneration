@@ -20,6 +20,8 @@ struct Hermite
 {
     float3 position;
     float3 normal;
+    float d0;
+    float d1;
 };
 
 struct Sphere
@@ -209,10 +211,10 @@ void CheckSignFlips(uint3 id : SV_DispatchThreadID)
 
 float3 ComputeNormal(float3 pos)
 {
-    float2 epsilon2 = float2(0.001f, 0.001f);
-    return normalize(float3(SDFScene(pos + epsilon2.xyy) - SDFScene(pos - epsilon2.xyy),
-                            SDFScene(pos + epsilon2.yxy) - SDFScene(pos - epsilon2.yxy),
-                            SDFScene(pos + epsilon2.yyx) - SDFScene(pos - epsilon2.yyx)));
+    float epsilon = 0.001f;
+    return normalize(float3(SDFScene(pos + float3(epsilon, 0, 0)) - SDFScene(pos - float3(epsilon, 0, 0)),
+                            SDFScene(pos + float3(0, epsilon, 0)) - SDFScene(pos - float3(0, epsilon, 0)),
+                            SDFScene(pos + float3(0, 0, epsilon)) - SDFScene(pos - float3(0, 0, epsilon))));
 }
 
 
@@ -258,7 +260,13 @@ void ExtractHermiteData(uint3 id : SV_DispatchThreadID)
 
         float d0 = cornerSDF[c0];
         float d1 = cornerSDF[c1];
-
+        uint index = cellIndex * 12 + e;
+        
+        hermiteData[index].position = float3(0, 0, 0);
+        hermiteData[index].normal = float3(0, 0, 0);
+        hermiteData[index].d0 = 0;
+        hermiteData[index].d1 = 0;
+        
         if ((d0 < 0 && d1 >= 0) || (d0 >= 0 && d1 < 0))
         {
             // Compute intersection t parameter
@@ -271,6 +279,8 @@ void ExtractHermiteData(uint3 id : SV_DispatchThreadID)
             uint writeIndex = cellIndex * 12 + count;
             hermiteData[writeIndex].position = p;
             hermiteData[writeIndex].normal = n;
+            hermiteData[writeIndex].d0 = d0;
+            hermiteData[writeIndex].d1= d1;
 
             count++;
         }

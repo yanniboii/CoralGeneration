@@ -212,6 +212,10 @@ public class DualContourMaster : MonoBehaviour
         {
             Debug.Log(i + " : " + hermite[i].position + " : " + hermite[i].normal);
         }
+        for (int i = 0; i < cellAmount * 12; i++)
+        {
+            Debug.Log(i + " : " + hermite[i].d0 + " : " + hermite[i].d1);
+        }
         for (int i = 0; i < cellAmount; i++)
         {
             Debug.Log(i + " : " + hermiteCount[i]);
@@ -233,6 +237,8 @@ struct HermiteData
 {
     public Vector3 position;
     public Vector3 normal;
+    public float d0;
+    public float d1;
 
-    public static int GetSize() { return (sizeof(float) * 6); }
+    public static int GetSize() { return (sizeof(float) * 8); }
 }
