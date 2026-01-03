@@ -86,6 +86,12 @@ float3 GetPointFromGridCornerID(uint gridID)
     return p;
 }
 
+float3 CornerWorldPos(int x, int y, int z)
+{
+    float3 t = float3(x, y, z) / float(cornerResolution - 1);
+    return lerp(boundStart, boundEnd, t);
+}
+
 #endif
 
 // Sample SDF's
@@ -297,7 +303,86 @@ void ExtractHermiteData(uint3 id : SV_DispatchThreadID)
 [numthreads(8, 8, 8)]
 void SolveQEF(uint3 id : SV_DispatchThreadID)
 {
+    int cellRes = cornerResolution - 1;
+    if (id.x >= cellRes || id.y >= cellRes || id.z >= cellRes)
+        return;
 
+    uint cellID = GetPointIDOnGrid(id.x, id.y, id.z);
+
+    uint count = hermiteCounts[cellID];
+    if (count < 3)
+    {
+        // Not enough constraints ? fallback
+        cellVertices[cellID] = float3(0, 0, 0);
+        return;
+    }
+
+    // ---- Step 1: centroid ----
+    float3 _centroid = 0;
+    for (uint i = 0; i < count; i++)
+    {
+        _centroid += hermiteData[cellID * 12 + i].position;
+    }
+    _centroid /= count;
+
+    // ---- Step 2: build A and b ----
+    float3x3 A = 0;
+    float3 b = 0;
+
+    for (uint i = 0; i < count; i++)
+    {
+        Hermite h = hermiteData[cellID * 12 + i];
+        float3 n = h.normal;
+        float d = dot(n, h.position - _centroid);
+
+        A += float3x3(
+            n.x * n.x, n.x * n.y, n.x * n.z,
+            n.y * n.x, n.y * n.y, n.y * n.z,
+            n.z * n.x, n.z * n.y, n.z * n.z
+        );
+
+        b += n * d;
+    }
+
+    // ---- Step 3: solve A d = b ----
+    float det =
+          A[0][0] * (A[1][1] * A[2][2] - A[1][2] * A[2][1])
+        - A[0][1] * (A[1][0] * A[2][2] - A[1][2] * A[2][0])
+        + A[0][2] * (A[1][0] * A[2][1] - A[1][1] * A[2][0]);
+
+    float3 result = _centroid;
+
+    if (abs(det) > 1e-6)
+    {
+        float invDet = 1.0 / det;
+
+        float3x3 invA;
+        invA[0] = invDet * float3(
+            A[1][1] * A[2][2] - A[1][2] * A[2][1],
+            A[0][2] * A[2][1] - A[0][1] * A[2][2],
+            A[0][1] * A[1][2] - A[0][2] * A[1][1]
+        );
+        invA[1] = invDet * float3(
+            A[1][2] * A[2][0] - A[1][0] * A[2][2],
+            A[0][0] * A[2][2] - A[0][2] * A[2][0],
+            A[0][2] * A[1][0] - A[0][0] * A[1][2]
+        );
+        invA[2] = invDet * float3(
+            A[1][0] * A[2][1] - A[1][1] * A[2][0],
+            A[0][1] * A[2][0] - A[0][0] * A[2][1],
+            A[0][0] * A[1][1] - A[0][1] * A[1][0]
+        );
+
+        float3 d = mul(invA, b);
+        result = _centroid + d;
+    }
+
+    // ---- Step 4: clamp inside cell ----
+    float3 cellMin = CornerWorldPos(id.x, id.y, id.z);
+    float3 cellMax = CornerWorldPos(id.x + 1, id.y + 1, id.z + 1);
+    result = clamp(result, cellMin, cellMax);
+
+    cellVertices[cellID] = result;
 }
 
 #endif

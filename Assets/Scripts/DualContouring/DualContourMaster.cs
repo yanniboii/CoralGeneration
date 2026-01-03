@@ -50,6 +50,7 @@ public class DualContourMaster : MonoBehaviour
         SDFDispatch();
         SignFlipDispatch();
         HermiteDispatch();
+        QEFDispatch();
     }
 
     private void OnDestroy()
@@ -222,13 +223,56 @@ public class DualContourMaster : MonoBehaviour
         }
     }
 
+    private void SetQEFBuffers()
+    {
+        dualContourShader.SetBuffer(dualContourShader.FindKernel("SolveQEF"), "hermiteData", hermiteData);
+        dualContourShader.SetBuffer(dualContourShader.FindKernel("SolveQEF"), "hermiteCounts", hermiteCounts);
+        dualContourShader.SetBuffer(dualContourShader.FindKernel("SolveQEF"), "cellVertices", cellVertices);
+    }
+
+    private void SetQEFData()
+    {
+        dualContourShader.SetVector("boundStart", DLAMaster.boundStart);
+        dualContourShader.SetVector("boundEnd", DLAMaster.boundEnd);
+        dualContourShader.SetInt("gridResolution", DLAMaster.gridDivisions);
+        dualContourShader.SetInt("cornerResolution", cornerResolution);
+    }
+
+
+    private void GetQEFData()
+    {
+        if (cellVertexData == null)
+            cellVertexData = new Vector3[cellAmount];
+
+        cellVertices.GetData(cellVertexData);
+    }
+
+    void QEFDispatch()
+    {
+        SetQEFBuffers();
+        SetQEFData();
+
+        int numThreads = 8;
+        int groupsX = Mathf.CeilToInt((float)DLAMaster.gridDivisions / (float)numThreads);
+        int groupsY = Mathf.CeilToInt((float)DLAMaster.gridDivisions / (float)numThreads);
+        int groupsZ = Mathf.CeilToInt((float)DLAMaster.gridDivisions / (float)numThreads);
+
+        dualContourShader.Dispatch(dualContourShader.FindKernel("SolveQEF"), groupsX, groupsY, groupsZ);
+
+        GetQEFData();
+        for (int i = 0; i < cellAmount; i++)
+        {
+            Debug.Log(i + " : " + cellVertexData[i]);
+        }
+    }
+
     private void OnDisable()
     {
         sdfValues.Dispose();
         activeCells.Dispose();
         hermiteCounts.Dispose();
         hermiteData.Dispose();
-        //cellVertices.Dispose();
+        cellVertices.Dispose();
         //triangles.Dispose();
     }
 }
