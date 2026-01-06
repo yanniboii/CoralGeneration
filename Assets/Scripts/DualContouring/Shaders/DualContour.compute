@@ -312,12 +312,11 @@ void SolveQEF(uint3 id : SV_DispatchThreadID)
     uint count = hermiteCounts[cellID];
     if (count < 3)
     {
-        // Not enough constraints ? fallback
         cellVertices[cellID] = float3(0, 0, 0);
         return;
     }
 
-    // ---- Step 1: centroid ----
+    // centroid
     float3 _centroid = 0;
     for (uint i = 0; i < count; i++)
     {
@@ -325,26 +324,26 @@ void SolveQEF(uint3 id : SV_DispatchThreadID)
     }
     _centroid /= count;
 
-    // ---- Step 2: build A and b ----
+    // build A and b
     float3x3 A = 0;
     float3 b = 0;
 
     for (uint i = 0; i < count; i++)
     {
         Hermite h = hermiteData[cellID * 12 + i];
-        float3 n = h.normal;
-        float d = dot(n, h.position - _centroid);
+        float3 normal = h.normal;
+        float d = dot(normal, h.position - _centroid);
 
         A += float3x3(
-            n.x * n.x, n.x * n.y, n.x * n.z,
-            n.y * n.x, n.y * n.y, n.y * n.z,
-            n.z * n.x, n.z * n.y, n.z * n.z
+            normal.x * normal.x, normal.x * normal.y, normal.x * normal.z,
+            normal.y * normal.x, normal.y * normal.y, normal.y * normal.z,
+            normal.z * normal.x, normal.z * normal.y, normal.z * normal.z
         );
 
-        b += n * d;
+        b += normal * d;
     }
 
-    // ---- Step 3: solve A d = b ----
+    // solve A d = b 
     float det =
           A[0][0] * (A[1][1] * A[2][2] - A[1][2] * A[2][1])
         - A[0][1] * (A[1][0] * A[2][2] - A[1][2] * A[2][0])
@@ -377,7 +376,7 @@ void SolveQEF(uint3 id : SV_DispatchThreadID)
         result = _centroid + d;
     }
 
-    // ---- Step 4: clamp inside cell ----
+    // clamp inside cell
     float3 cellMin = CornerWorldPos(id.x, id.y, id.z);
     float3 cellMax = CornerWorldPos(id.x + 1, id.y + 1, id.z + 1);
     result = clamp(result, cellMin, cellMax);
@@ -393,7 +392,78 @@ void SolveQEF(uint3 id : SV_DispatchThreadID)
 [numthreads(8, 8, 8)]
 void Triangulate(uint3 id : SV_DispatchThreadID)
 {
+    int cellRes = cornerResolution - 1;
+    if (id.x >= cellRes || id.y >= cellRes || id.z >= cellRes)
+        return;
 
+    uint cellID = GetPointIDOnGrid(id.x, id.y, id.z);
+
+    if (hermiteCounts[cellID] == 0)
+        return;
+
+    uint base = cellID * 6;
+    uint t = 0;
+
+    // ---------- +X ----------
+    if (id.x + 1 < cellRes)
+    {
+        uint nx = GetPointIDOnGrid(id.x + 1, id.y, id.z);
+        if (hermiteCounts[nx] > 0)
+        {
+            triangles[base + t++] = uint3(
+                cellID,
+                GetPointIDOnGrid(id.x, id.y + 1, id.z),
+                GetPointIDOnGrid(id.x, id.y + 1, id.z + 1)
+            );
+            triangles[base + t++] = uint3(
+                cellID,
+                GetPointIDOnGrid(id.x, id.y + 1, id.z + 1),
+                GetPointIDOnGrid(id.x, id.y, id.z + 1)
+            );
+        }
+    }
+
+    // ---------- +Y ----------
+    if (id.y + 1 < cellRes)
+    {
+        uint ny = GetPointIDOnGrid(id.x, id.y + 1, id.z);
+        if (hermiteCounts[ny] > 0)
+        {
+            triangles[base + t++] = uint3(
+                cellID,
+                GetPointIDOnGrid(id.x + 1, id.y, id.z),
+                GetPointIDOnGrid(id.x + 1, id.y, id.z + 1)
+            );
+            triangles[base + t++] = uint3(
+                cellID,
+                GetPointIDOnGrid(id.x + 1, id.y, id.z + 1),
+                GetPointIDOnGrid(id.x, id.y, id.z + 1)
+            );
+        }
+    }
+
+    // ---------- +Z ----------
+    if (id.z + 1 < cellRes)
+    {
+        uint nz = GetPointIDOnGrid(id.x, id.y, id.z + 1);
+        if (hermiteCounts[nz] > 0)
+        {
+            triangles[base + t++] = uint3(
+                cellID,
+                GetPointIDOnGrid(id.x + 1, id.y, id.z),
+                GetPointIDOnGrid(id.x + 1, id.y + 1, id.z)
+            );
+            triangles[base + t++] = uint3(
+                cellID,
+                GetPointIDOnGrid(id.x + 1, id.y + 1, id.z),
+                GetPointIDOnGrid(id.x, id.y + 1, id.z)
+            );
+        }
+    }
+
+    // fill unused slots with degenerate triangles
+    for (; t < 6; t++)
+        triangles[base + t] = uint3(0, 0, 0);
 }
 
 #endif

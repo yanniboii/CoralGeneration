@@ -1,4 +1,6 @@
+using System;
 using Unity.Mathematics;
+using UnityEditor;
 using UnityEngine;
 
 public class DualContourMaster : MonoBehaviour
@@ -30,6 +32,8 @@ public class DualContourMaster : MonoBehaviour
 
     private DLAMaster DLAMaster;
 
+    string path = "Assets/Prefabs/";
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -51,6 +55,9 @@ public class DualContourMaster : MonoBehaviour
         SignFlipDispatch();
         HermiteDispatch();
         QEFDispatch();
+        TriangleDispatch();
+
+        GenerateMesh();
     }
 
     private void OnDestroy()
@@ -65,7 +72,7 @@ public class DualContourMaster : MonoBehaviour
         hermiteData = new GraphicsBuffer(GraphicsBuffer.Target.Structured, maxHermites, HermiteData.GetSize());
         hermiteCounts = new GraphicsBuffer(GraphicsBuffer.Target.Structured, cellAmount, sizeof(uint));
         cellVertices = new GraphicsBuffer(GraphicsBuffer.Target.Structured, gridEdges, sizeof(float) * 3);
-        triangles = new GraphicsBuffer(GraphicsBuffer.Target.Structured, gridCorners, sizeof(uint) * 3);
+        triangles = new GraphicsBuffer(GraphicsBuffer.Target.Structured, cellAmount * 6, sizeof(uint) * 3);
     }
 
     void SetSDFBuffers()
@@ -266,6 +273,67 @@ public class DualContourMaster : MonoBehaviour
         }
     }
 
+    private void SetTriangleBuffers()
+    {
+        dualContourShader.SetBuffer(dualContourShader.FindKernel("Triangulate"), "triangles", triangles);
+        dualContourShader.SetBuffer(dualContourShader.FindKernel("Triangulate"), "hermiteCounts", hermiteCounts);
+    }
+
+    private void SetTriangleData()
+    {
+        dualContourShader.SetVector("boundStart", DLAMaster.boundStart);
+        dualContourShader.SetVector("boundEnd", DLAMaster.boundEnd);
+        dualContourShader.SetInt("gridResolution", DLAMaster.gridDivisions);
+        dualContourShader.SetInt("cornerResolution", cornerResolution);
+    }
+
+
+    private void GetTriangleData()
+    {
+        if (triangleData == null)
+            triangleData = new uint3[cellAmount * 6];
+
+        triangles.GetData(triangleData);
+    }
+
+    int[] meshTriangles;
+
+    void TriangleDispatch()
+    {
+        SetTriangleBuffers();
+        SetTriangleData();
+
+        int numThreads = 8;
+        int groupsX = Mathf.CeilToInt((float)DLAMaster.gridDivisions / (float)numThreads);
+        int groupsY = Mathf.CeilToInt((float)DLAMaster.gridDivisions / (float)numThreads);
+        int groupsZ = Mathf.CeilToInt((float)DLAMaster.gridDivisions / (float)numThreads);
+
+        dualContourShader.Dispatch(dualContourShader.FindKernel("Triangulate"), groupsX, groupsY, groupsZ);
+        meshTriangles = new int[(cellAmount * 6) * 3];
+
+        GetTriangleData();
+        for (int i = 0; i < cellAmount * 6; i++)
+        {
+            Debug.Log(i + " : " + triangleData[i]);
+
+            meshTriangles[i] = (int)triangleData[i].x;
+            meshTriangles[i] = (int)triangleData[i].y;
+            meshTriangles[i] = (int)triangleData[i].z;
+
+        }
+    }
+
+    void GenerateMesh()
+    {
+        Mesh mesh = new Mesh();
+
+        mesh.vertices = cellVertexData;
+        mesh.triangles = meshTriangles;
+
+        AssetDatabase.CreateAsset(mesh, path + DateTime.Now.ToString().Replace("/", "_").Replace(":", "-") + ".asset");
+        AssetDatabase.SaveAssets();
+    }
+
     private void OnDisable()
     {
         sdfValues.Dispose();
@@ -273,7 +341,7 @@ public class DualContourMaster : MonoBehaviour
         hermiteCounts.Dispose();
         hermiteData.Dispose();
         cellVertices.Dispose();
-        //triangles.Dispose();
+        triangles.Dispose();
     }
 }
 
